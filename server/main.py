@@ -9,14 +9,22 @@ Run inside the container:
 
 import csv
 import json
+import os
 import re
+import signal
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
-RUNS = Path(__file__).resolve().parents[1] / "runs"
+ROOT = Path(__file__).resolve().parents[1]
+RUNS = ROOT / "runs"
+
+_children = []  # launched experiment processes (reaped on /api/runs)
 
 app = FastAPI(title="buildingsimulator run store")
 app.add_middleware(
@@ -34,8 +42,48 @@ def _manifest(run_id: str) -> dict:
     return json.loads(path.read_text())
 
 
+class LaunchConfig(BaseModel):
+    name: str = "experiment"
+    controller: str = Field("realistic", pattern="^(realistic|ideal)$")
+    durationDays: float = Field(7.0, ge=0.1, le=30.0)
+    cloudiness: float = Field(0.4, ge=0.0, le=1.0)
+    vacant: list[int] = [3]
+
+
+@app.post("/api/launch")
+def launch(config: LaunchConfig):
+    running = sum(1 for m in list_runs() if m.get("status") == "running")
+    if running >= 3:
+        raise HTTPException(429, "already 3 runs in progress")
+    proc = subprocess.Popen(
+        [sys.executable, "run_experiment.py", config.model_dump_json()],
+        cwd=ROOT / "sil", start_new_session=True)
+    _children.append(proc)
+    return {"launched": True, "pid": proc.pid}
+
+
+@app.post("/api/runs/{run_id}/stop")
+def stop_run(run_id: str):
+    manifest = _manifest(run_id)
+    if manifest.get("status") != "running":
+        raise HTTPException(409, "run is not in progress")
+    pid = manifest.get("pid")
+    if not pid:
+        raise HTTPException(409, "run has no recorded pid")
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    manifest["status"] = "stopped"
+    (RUNS / run_id / "manifest.json").write_text(json.dumps(manifest, indent=1))
+    return {"stopped": True}
+
+
 @app.get("/api/runs")
 def list_runs():
+    for p in list(_children):  # reap finished children
+        if p.poll() is not None:
+            _children.remove(p)
     if not RUNS.exists():
         return []
     manifests = []

@@ -11,6 +11,22 @@ export async function listRuns() {
   return res.json();
 }
 
+export async function launchRun(config) {
+  const res = await fetch(`${API}/launch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) throw new Error(`launch: ${res.status}`);
+  return res.json();
+}
+
+export async function stopRun(runId) {
+  const res = await fetch(`${API}/runs/${runId}/stop`, { method: "POST" });
+  if (!res.ok) throw new Error(`stop: ${res.status}`);
+  return res.json();
+}
+
 export async function fetchSeries(runId, manifest, stride = 5) {
   const res = await fetch(`${API}/runs/${runId}/series?stride=${stride}`);
   if (!res.ok) throw new Error(`series: ${res.status}`);

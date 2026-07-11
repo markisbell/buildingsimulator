@@ -41,6 +41,12 @@ Simulation runs persist to `runs/<id>/` (manifest.json + series.csv); the dashbo
 lists them, replays them with a time scrubber, and polls live while a run is in
 progress. Falls back to bundled mock data when the API is unreachable.
 
+Experiments are launched from the dashboard (new run: thermostat type, duration,
+cloudiness, vacant apartments) via `POST /api/launch`, which spawns
+`sil/run_experiment.py` inside the API container; running experiments can be stopped.
+The leaderboard view ranks all runs by KPI (per-evaluated-day normalized, best values
+highlighted).
+
 ## Layout
 
 | Path | Content |

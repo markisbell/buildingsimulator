@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listRuns, fetchSeries } from "./api.js";
+import { listRuns, fetchSeries, stopRun } from "./api.js";
 import { manifest as mockManifest, series as mockSeries } from "./mock/run.js";
 import BuildingView from "./components/BuildingView.jsx";
 import PlantPanel from "./components/PlantPanel.jsx";
@@ -7,6 +7,8 @@ import KpiBoard from "./components/KpiBoard.jsx";
 import SeriesChart from "./components/SeriesChart.jsx";
 import DeviceInspector from "./components/DeviceInspector.jsx";
 import TimeScrubber from "./components/TimeScrubber.jsx";
+import Launcher from "./components/Launcher.jsx";
+import Leaderboard from "./components/Leaderboard.jsx";
 
 const POLL_MS = 5000;
 
@@ -18,6 +20,8 @@ export default function App() {
   const [source, setSource] = useState("loading");
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState(1);
+  const [view, setView] = useState("run");
+  const [showLauncher, setShowLauncher] = useState(false);
   const prevLen = useRef(0);
 
   const loadRun = useCallback(async (m) => {
@@ -59,10 +63,13 @@ export default function App() {
   }, [runId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (source !== "api" || manifest?.status !== "running") return;
+    if (source !== "api") return;
+    const anyRunning = manifest?.status === "running"
+      || runs.some((r) => r.status === "running");
+    if (!anyRunning) return;
     const t = setInterval(refresh, POLL_MS);
     return () => clearInterval(t);
-  }, [source, manifest, refresh]);
+  }, [source, manifest, runs, refresh]);
 
   if (!manifest || !series || !series.time.length) {
     return <div className="app">loading run store…</div>;
@@ -93,8 +100,37 @@ export default function App() {
           </span>
         )}
         <span className="spacer" />
+        <div className="tabs" style={{ marginBottom: 0 }}>
+          <button className={view === "run" ? "active" : ""}
+                  onClick={() => setView("run")}>run</button>
+          <button className={view === "leaderboard" ? "active" : ""}
+                  onClick={() => setView("leaderboard")}>leaderboard</button>
+        </div>
+        {manifest.status === "running" && source === "api" && (
+          <button onClick={async () => { await stopRun(manifest.id); refresh(); }}>
+            stop
+          </button>
+        )}
+        <button onClick={() => setShowLauncher((v) => !v)}>new run</button>
         <button onClick={refresh}>refresh</button>
       </div>
+
+      {showLauncher && (
+        <Launcher nApt={manifest.apartments.length}
+                  onLaunched={() => {
+                    // manifest appears a few seconds after launch
+                    refresh();
+                    setTimeout(refresh, 4000);
+                    setTimeout(refresh, 10000);
+                  }}
+                  onClose={() => setShowLauncher(false)} />
+      )}
+
+      {view === "leaderboard" ? (
+        <Leaderboard runs={runs.length ? runs : [manifest]}
+                     onOpen={(id) => { setRunId(id); setView("run"); }} />
+      ) : (
+      <>{/* run view */}
 
       <div className="grid">
         <div className="card">
@@ -121,6 +157,8 @@ export default function App() {
         </div>
         <DeviceInspector manifest={manifest} aptId={selected} />
       </div>
+      </>
+      )}
     </div>
   );
 }
