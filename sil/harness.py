@@ -60,13 +60,15 @@ class BuildingFMU:
 
 
 def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
-                   output_names, record_dt=None):
+                   output_names, record_dt=None, on_record=None):
     """Run a closed-loop SIL simulation.
 
     controllers: dict mapping FMU input name -> controller object with
                  .step(t, measurements: dict) -> float
     scenario:    callable t -> dict of exogenous FMU inputs
                  (weather, setpoints for supervisory inputs)
+    on_record:   optional callback invoked with each recorded row
+                 (e.g. runstore.RunWriter.append for live persistence)
     Returns a list of per-step records (dicts).
     """
     fmu = BuildingFMU(fmu_path)
@@ -88,7 +90,10 @@ def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
         fmu.set_inputs({**exo, **actions})
 
         if t >= next_record:
-            records.append({"time": t, **meas, **actions, **exo})
+            record = {"time": t, **meas, **actions, **exo}
+            records.append(record)
+            if on_record:
+                on_record(record)
             next_record += record_dt
 
         fmu.step(control_dt)

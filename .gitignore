@@ -1,6 +1,7 @@
 # generated artifacts
 build/
 results/
+runs/
 __pycache__/
 *.pyc
 

@@ -1,6 +1,6 @@
-export default function DeviceInspector({ manifest, series, aptId }) {
+export default function DeviceInspector({ manifest, aptId }) {
   const apt = manifest.apartments.find((a) => a.id === aptId);
-  const dev = manifest.devices[aptId];
+  const dev = (manifest.devices || {})[aptId];
 
   return (
     <div className="card">
@@ -9,6 +9,11 @@ export default function DeviceInspector({ manifest, series, aptId }) {
         <p style={{ color: "var(--text-2)", fontSize: 13 }}>
           Vacant apartment: no thermostat installed. Zone temperature is held
           up only by neighbour heat through floor and ceiling.
+        </p>
+      ) : !dev ? (
+        <p style={{ color: "var(--text-2)", fontSize: 13 }}>
+          No device diagnostics for this run (ideal controller, or run still
+          in progress — diagnostics are written when the run finishes).
         </p>
       ) : (
         <table className="kv">

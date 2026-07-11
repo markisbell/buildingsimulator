@@ -25,7 +25,15 @@ docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run
 # two-room prototype
 .\scripts\build_fmu.ps1                # compile modelica/PrototypeTwoRooms.mo
 .\scripts\run_prototype.ps1            # run both prototype scenarios
+
+# dashboard: API server (port 8010) + React UI (needs Node.js)
+.\scripts\run_server.ps1               # serves runs/ as REST API
+cd ui; npm install; npm run dev        # dashboard at http://localhost:5173
 ```
+
+Simulation runs persist to `runs/<id>/` (manifest.json + series.csv); the dashboard
+lists them, replays them with a time scrubber, and polls live while a run is in
+progress. Falls back to bundled mock data when the API is unreachable.
 
 ## Layout
 
@@ -44,7 +52,9 @@ docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run
 | `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |
 | `sil/run_thermostat_comparison.py` | Ideal PI vs realistic eTRV on identical scenario, KPI table |
 | `sil/run_prototype.py` | Prototype scenarios: winter week closed-loop; hydraulic coupling demo |
-| `ui/` | React dashboard (Vite + Recharts): building view, plant panel, KPI board, time scrubber, device inspector — currently on mock data shaped like the future run-store API |
+| `ui/` | React dashboard (Vite + Recharts): run selector, building view, plant panel, KPI board, time scrubber, device inspector; live-polls running simulations |
+| `sil/runstore.py` | Persists every run to `runs/<id>/` (manifest + series) |
+| `server/main.py` | FastAPI run-store API (`/api/runs`, `/manifest`, `/series`) |
 | `build/` | Compiled FMUs (generated) |
 | `results/` | Plots + CSV time series (generated) |
 | `docs/` | Research report, BOPTEST setup |

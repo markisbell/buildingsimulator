@@ -22,7 +22,8 @@ from harness import run_simulation
 from controllers import PIThermostat, ScriptedValve
 from thermostat import ElectronicThermostat, SampledPI
 from scenario_common import (C2K, DAY, SCHEDULES, day_night_setpoint,
-                             make_winter_scenario)
+                             default_orientations, make_winter_scenario)
+from runstore import create_run
 import kpi
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -103,22 +104,77 @@ def occupied_overheating(df, schedules):
     return total
 
 
-def run(name, controllers):
+def apartments_meta(controller_label):
+    ori = default_orientations(N_APT)
+    apts = []
+    for i in range(1, N_APT + 1):
+        sched = SCHEDULES.get(i)
+        apts.append({
+            "id": i,
+            "floor": (i - 1) // 2 + 1,
+            "facade": "south" if ori[i] == 180.0 else "north",
+            "vacant": sched is None,
+            "controller": "—" if sched is None else controller_label,
+            "schedule": "vacant" if sched is None else
+                        f"{sched[0]:g} °C {sched[2]}–{sched[3]} h / {sched[1]:g} °C",
+        })
+    return apts
+
+
+def run(name, controllers, controller_label):
     print(f"running: {name} ...")
+    writer = create_run(name, {
+        "durationDays": DURATION / DAY,
+        "building": {"floors": N_APT // 2, "apartmentsPerFloor": 2},
+        "scenario": {"weather": "synthetic winter + clear-sky solar",
+                     "cloudiness": 0.4, "startDate": "2026-01-12"},
+        "apartments": apartments_meta(controller_label),
+    })
     records = run_simulation(FMU, controllers, EXOGENOUS,
                              duration=DURATION, control_dt=CONTROL_DT,
-                             output_names=OUTPUTS, record_dt=CONTROL_DT)
+                             output_names=OUTPUTS, record_dt=CONTROL_DT,
+                             on_record=writer.append)
     df = pd.DataFrame(records)
     df.to_csv(RESULTS / f"cmp_{name}.csv", index=False)
+
+    kpis = {
+        "discomfortKh": round(occupied_discomfort(df, SCHEDULES), 1),
+        "overheatKh": round(occupied_overheating(df, SCHEDULES), 1),
+        "boilerKwh": round(kpi.boiler_energy_kwh(df), 1),
+        "pumpKwh": round(kpi.pump_energy_kwh(df), 2),
+    }
+    thermostats = {n: c for n, c in controllers.items()
+                   if isinstance(c, ElectronicThermostat)}
+    devices = None
+    if thermostats:
+        travel, moves = kpi.battery_kpis(thermostats.values())
+        kpis["valveTravelStrokes"] = round(travel, 1)
+        kpis["valveMoves"] = moves
+        devices = {}
+        for n, th in thermostats.items():
+            i = int(re.search(r"\[(\d+)\]", n).group(1))
+            a = th.adaptation or {}
+            devices[str(i)] = {
+                "zeroErrorUm": round(a.get("zero_error_mm", 0) * 1000),
+                "sealEstUm": round((a.get("seal_est_mm") or 0) * 1000),
+                "travelMm": round(th.travel_mm, 1),
+                "moves": th.n_moves,
+                "adaptationAgeDays": round((DURATION - a.get("t", 0)) / DAY, 1),
+            }
+    else:
+        travel, moves = ideal_travel(df)
+        kpis["valveTravelStrokes"] = round(travel, 1)
+        kpis["valveMoves"] = moves
+    writer.finish(kpis=kpis, devices=devices)
     return df
 
 
 def main():
     ideal_ctrl = build_ideal()
-    df_ideal = run("ideal", ideal_ctrl)
+    df_ideal = run("ideal", ideal_ctrl, "ideal PI")
 
     real_ctrl = build_realistic()
-    df_real = run("realistic", real_ctrl)
+    df_real = run("realistic", real_ctrl, "eTRV / SampledPI")
 
     # ---------- KPIs ----------
     thermostats = [c for c in real_ctrl.values()

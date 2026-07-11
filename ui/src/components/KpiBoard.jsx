@@ -1,9 +1,11 @@
 export default function KpiBoard({ kpis }) {
+  const k = kpis || {};
+  const fmt = (v, unit) => (v === undefined ? "—" : `${v} ${unit}`);
   const items = [
-    { label: "discomfort", value: `${kpis.discomfortKh} K·h` },
-    { label: "overheating", value: `${kpis.overheatKh} K·h` },
-    { label: "boiler energy", value: `${kpis.boilerKwh} kWh` },
-    { label: "valve travel", value: `${kpis.valveTravelStrokes} strokes` },
+    { label: "discomfort", value: fmt(k.discomfortKh, "K·h") },
+    { label: "overheating", value: fmt(k.overheatKh, "K·h") },
+    { label: "boiler energy", value: fmt(k.boilerKwh, "kWh") },
+    { label: "valve travel", value: fmt(k.valveTravelStrokes, "strokes") },
   ];
   return (
     <div className="card">
