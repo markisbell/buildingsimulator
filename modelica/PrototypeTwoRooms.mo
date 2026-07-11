@@ -5,8 +5,8 @@ model PrototypeTwoRooms
   package MediumW = Buildings.Media.Water "Water medium";
 
   // Nominal design values (60/40 radiator system, 20 degC room)
-  parameter Modelica.Units.SI.Power Q_flow_nominal_rad = 2000
-    "Nominal heat output per radiator at 60/40/20";
+  parameter Modelica.Units.SI.Power Q_flow_nominal_rad = 3000
+    "Nominal heat output per radiator at 60/40/20 (~50 % oversized vs. design load, typical in practice)";
   parameter Modelica.Units.SI.MassFlowRate m_flow_nominal_rad = Q_flow_nominal_rad/4186/20
     "Nominal mass flow per radiator branch";
   parameter Modelica.Units.SI.MassFlowRate m_flow_nominal_tot = 2*m_flow_nominal_rad
