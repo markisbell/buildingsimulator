@@ -1,0 +1,11 @@
+// Build PrototypeTwoRooms as FMI 2.0 co-simulation FMU with embedded CVODE solver.
+// Run inside the buildingsimulator:dev container with workdir /work/build:
+//   omc /work/modelica/build_fmu.mos
+
+loadModel(Modelica); getErrorString();
+loadModel(Buildings); getErrorString();
+loadFile("/work/modelica/PrototypeTwoRooms.mo"); getErrorString();
+
+setCommandLineOptions("--fmiFlags=s:cvode"); getErrorString();
+buildModelFMU(PrototypeTwoRooms, version="2.0", fmuType="cs", fileNamePrefix="PrototypeTwoRooms");
+getErrorString();

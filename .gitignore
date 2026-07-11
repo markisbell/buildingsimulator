@@ -1,0 +1,8 @@
+# generated artifacts
+build/
+results/
+__pycache__/
+*.pyc
+
+# local tool settings
+.claude/

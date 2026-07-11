@@ -1,0 +1,96 @@
+"""Software-in-the-loop harness: fixed-step co-simulation of a building FMU.
+
+The FMU is the plant (building + hydronic system); all control intelligence
+lives outside, in Python controller objects (see controllers.py).
+"""
+
+from fmpy import read_model_description, extract
+from fmpy.fmi2 import FMU2Slave
+
+
+class BuildingFMU:
+    """Thin wrapper around an FMI 2.0 co-simulation FMU with named I/O."""
+
+    def __init__(self, fmu_path: str, start_time: float = 0.0):
+        self._md = read_model_description(fmu_path)
+        self._vrs = {v.name: v.valueReference for v in self._md.modelVariables}
+        self._unzipdir = extract(fmu_path)
+        self._fmu = FMU2Slave(
+            guid=self._md.guid,
+            unzipDirectory=self._unzipdir,
+            modelIdentifier=self._md.coSimulation.modelIdentifier,
+            instanceName="buildingsim",
+        )
+        self.time = start_time
+        self._fmu.instantiate()
+        self._fmu.setupExperiment(startTime=start_time)
+        self._initialized = False
+
+    @property
+    def variable_names(self):
+        return list(self._vrs)
+
+    def set_inputs(self, **values: float) -> None:
+        vrs = [self._vrs[name] for name in values]
+        self._fmu.setReal(vrs, list(values.values()))
+
+    def initialize(self, **start_inputs: float) -> None:
+        self._fmu.enterInitializationMode()
+        if start_inputs:
+            self.set_inputs(**start_inputs)
+        self._fmu.exitInitializationMode()
+        self._initialized = True
+
+    def step(self, dt: float) -> None:
+        if not self._initialized:
+            raise RuntimeError("call initialize() before step()")
+        self._fmu.doStep(currentCommunicationPoint=self.time, communicationStepSize=dt)
+        self.time += dt
+
+    def get_outputs(self, names) -> dict:
+        vrs = [self._vrs[name] for name in names]
+        vals = self._fmu.getReal(vrs)
+        return dict(zip(names, vals))
+
+    def close(self) -> None:
+        self._fmu.terminate()
+        self._fmu.freeInstance()
+
+
+def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
+                   output_names, record_dt=None):
+    """Run a closed-loop SIL simulation.
+
+    controllers: dict mapping FMU input name -> controller object with
+                 .step(t, measurements: dict) -> float
+    scenario:    callable t -> dict of exogenous FMU inputs
+                 (weather, setpoints for supervisory inputs)
+    Returns a list of per-step records (dicts).
+    """
+    fmu = BuildingFMU(fmu_path)
+    exo0 = scenario(0.0)
+    act0 = {name: 0.5 for name in controllers}
+    fmu.initialize(**exo0, **act0)
+
+    records = []
+    record_dt = record_dt or control_dt
+    next_record = 0.0
+    t = 0.0
+    actions = dict(act0)
+
+    while t < duration:
+        meas = fmu.get_outputs(output_names)
+        # controllers observe, then act (sampled control like a real thermostat)
+        actions = {name: ctrl.step(t, meas) for name, ctrl in controllers.items()}
+        exo = scenario(t)
+        fmu.set_inputs(**exo, **actions)
+
+        if t >= next_record:
+            records.append({"time": t, **meas, **actions, **exo})
+            next_record += record_dt
+
+        fmu.step(control_dt)
+        t = fmu.time
+
+    fmu.close()
+    return records
