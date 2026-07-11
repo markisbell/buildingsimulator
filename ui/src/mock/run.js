@@ -52,6 +52,7 @@ function generate() {
   const solarSouth = [];
   const rooms = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
   const valves = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+  const flows = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
   const qBoi = [];
   const tSup = [];
   const tRet = [];
@@ -72,6 +73,7 @@ function generate() {
       if (sp === null) {
         rooms[a.id].push(12 + 0.8 * Math.sin((2 * Math.PI * (hour - 15)) / 24) + (south ? 0.9 * sun * sun : 0));
         valves[a.id].push(0);
+        flows[a.id].push(0);
         continue;
       }
       const recovery = Math.min(1, Math.max(0, (hour - 5.5) / 3.5));
@@ -82,13 +84,14 @@ function generate() {
       const boost = hour >= 6 && hour < 10 ? 0.95 : 0.2 - 0.12 * solarBump;
       const v = night ? 0.08 + 0.1 * (k % 3 === 0 ? 1 : 0) : Math.max(0.02, boost);
       valves[a.id].push(Math.round(v * 100) / 100);
+      flows[a.id].push(Math.round(v * 180));
       load += v;
     }
     qBoi.push(Math.round(4.5 * load * 10) / 10);
     tSup.push(Math.round((35 + 30 * ((15 - out) / 25)) * 10) / 10);
     tRet.push(Math.round((36 + 2.5 * load) * 10) / 10);
   }
-  return { time, tOut, solarSouth, rooms, valves, qBoi, tSup, tRet };
+  return { time, tOut, solarSouth, rooms, valves, flows, qBoi, tSup, tRet };
 }
 
 export const series = generate();

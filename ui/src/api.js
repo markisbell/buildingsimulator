@@ -36,9 +36,11 @@ export async function fetchSeries(runId, manifest, stride = 5) {
 export function adaptSeries(cols, manifest) {
   const rooms = {};
   const valves = {};
+  const flows = {};
   for (const a of manifest.apartments) {
     rooms[a.id] = (cols[`TRoom[${a.id}]`] || []).map((v) => v - C2K);
     valves[a.id] = cols[`yVal[${a.id}]`] || [];
+    flows[a.id] = (cols[`mFlow[${a.id}]`] || []).map((v) => v * 3600); // l/h
   }
   const firstSouth = manifest.apartments.find((a) => a.facade === "south");
   return {
@@ -47,6 +49,7 @@ export function adaptSeries(cols, manifest) {
     solarSouth: firstSouth ? cols[`QGain[${firstSouth.id}]`] || [] : [],
     rooms,
     valves,
+    flows,
     qBoi: (cols.QBoi || []).map((v) => v / 1000),
     tSup: (cols.TSup || []).map((v) => v - C2K),
     tRet: (cols.TRet || []).map((v) => v - C2K),

@@ -20,6 +20,7 @@ export default function SeriesChart({ manifest, series, idx }) {
       for (const a of manifest.apartments) {
         row[`T${a.id}`] = series.rooms[a.id][k];
         row[`v${a.id}`] = series.valves[a.id][k];
+        row[`f${a.id}`] = series.flows?.[a.id]?.[k];
       }
       row.tOut = series.tOut[k];
       row.qBoi = series.qBoi[k];
@@ -42,9 +43,15 @@ export default function SeriesChart({ manifest, series, idx }) {
         ? manifest.apartments
             .filter((a) => !a.vacant)
             .map((a, i) => ({
-              key: `v${a.id}`, name: `apt ${a.id}`, color: COLORS[i % COLORS.length], width: 1.2,
+              key: `v${a.id}`, name: a.room || `apt ${a.id}`, color: COLORS[i % COLORS.length], width: 1.2,
             }))
-        : [
+        : tab === "flows"
+          ? manifest.apartments
+              .filter((a) => !a.vacant)
+              .map((a, i) => ({
+                key: `f${a.id}`, name: a.room || `apt ${a.id}`, color: COLORS[i % COLORS.length], width: 1.2,
+              }))
+          : [
             { key: "qBoi", name: "boiler kW", color: "#2a78d6", width: 1.6 },
             { key: "tSup", name: "supply °C", color: "#c98500", width: 1.2 },
             { key: "tRet", name: "return °C", color: "#1baf7a", width: 1.2 },
@@ -53,9 +60,9 @@ export default function SeriesChart({ manifest, series, idx }) {
   return (
     <div>
       <div className="tabs">
-        {["temps", "valves", "plant"].map((k) => (
+        {["temps", "valves", "flows", "plant"].map((k) => (
           <button key={k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>
-            {k === "temps" ? "room temperatures" : k}
+            {k === "temps" ? "room temperatures" : k === "flows" ? "flows l/h" : k}
           </button>
         ))}
       </div>
