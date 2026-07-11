@@ -16,9 +16,15 @@ package survey: [docs/simulation-package-research.md](docs/simulation-package-re
 ## Quickstart (Windows, Docker Desktop required)
 
 ```powershell
-.\scripts\build_image.ps1     # once: toolchain image (OpenModelica 1.27 + Buildings 13 + FMPy)
-.\scripts\build_fmu.ps1       # compile modelica/PrototypeTwoRooms.mo -> build/PrototypeTwoRooms.fmu
-.\scripts\run_prototype.ps1   # run both SIL scenarios -> results/*.png, results/*.csv
+.\scripts\build_image.ps1              # once: toolchain image (OpenModelica 1.27 + Buildings 13 + FMPy)
+
+# multi-tenant building (default 3 floors x 2 apartments)
+.\scripts\build_multitenant_fmu.ps1 -Floors 3 -ApartmentsPerFloor 2
+docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run_multitenant.py
+
+# two-room prototype
+.\scripts\build_fmu.ps1                # compile modelica/PrototypeTwoRooms.mo
+.\scripts\run_prototype.ps1            # run both prototype scenarios
 ```
 
 ## Layout
@@ -26,13 +32,32 @@ package survey: [docs/simulation-package-research.md](docs/simulation-package-re
 | Path | Content |
 |------|---------|
 | `docker/` | Toolchain image definition |
-| `modelica/` | Plant/building models (`PrototypeTwoRooms.mo`) + FMU build script |
+| `modelica/BuildingSimulator/` | Modelica package: `ApartmentBranch` (valve + radiator + zone), `MultiTenantBuilding` (riser network + plant) |
+| `modelica/PrototypeTwoRooms.mo` | Minimal two-room prototype |
 | `sil/harness.py` | Generic FMU co-simulation loop (`BuildingFMU`, `run_simulation`) |
 | `sil/controllers.py` | Controller interface + baseline PI thermostat — the SIL slot for control strategies under test |
-| `sil/run_prototype.py` | Scenario A: winter week closed-loop; Scenario B: hydraulic coupling demo |
+| `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |
+| `sil/run_prototype.py` | Prototype scenarios: winter week closed-loop; hydraulic coupling demo |
 | `build/` | Compiled FMUs (generated) |
 | `results/` | Plots + CSV time series (generated) |
-| `docs/` | Research report, architecture |
+| `docs/` | Research report, BOPTEST setup |
+
+## Multi-tenant building model
+
+`BuildingSimulator.MultiTenantBuilding`: ideal boiler + constant-speed pump feed a
+vertical two-pipe riser; on every floor `nApeFlo` apartment branches tap off (EN 442-2
+radiator behind an equal-percentage valve, single-capacity zone). Floor and apartment
+counts are compile-time parameters (`.\scripts\build_multitenant_fmu.ps1 -Floors N
+-ApartmentsPerFloor M`).
+
+FMU inputs: `yVal[i]` per apartment, `TOut`, `TSupSet`.
+FMU outputs: `TRoom[i]`, `mFlow[i]`, `TSup`, `TRet`, `QBoi`, `PPum`.
+
+Two effects central to distributed thermostat control are built in:
+- **Riser hydraulics** — upper floors see less differential pressure, so open valves on
+  the ground floor starve the top floor (unbalanced system, no static balancing valves).
+- **Inter-apartment coupling** — stacked apartments exchange heat through floor/ceiling
+  conductances; an unheated apartment "steals" heat from its neighbours.
 
 ## Prototype model
 
@@ -48,8 +73,8 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 
 ## Roadmap
 
-1. ✅ Toolchain + prototype SIL loop (this state)
-2. Parameterizable multi-tenant model: N floors × M apartments, riser network, boiler/heat-pump plant
+1. ✅ Toolchain + prototype SIL loop
+2. ✅ Parameterizable multi-tenant model: N floors × M apartments, riser network, central plant
 3. Thermostat realism (sampling, valve travel limits, battery duty cycle) + Gymnasium multi-agent interface
 4. Experiments: adaptive + distributed control; benchmarking against
    [BOPTEST](https://ibpsa.github.io/project1-boptest/) `multizone_residential_hydronic` KPIs

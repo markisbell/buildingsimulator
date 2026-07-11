@@ -1,0 +1,21 @@
+// Build MultiTenantBuilding as FMI 2.0 co-simulation FMU with embedded CVODE.
+// Floor/apartment counts come from env vars NFLOORS / NAPTSPERFLOOR (default 3 x 2).
+// Run inside the buildingsimulator:dev container with workdir /work/build:
+//   docker run -e NFLOORS=5 -e NAPTSPERFLOOR=4 ... omc /work/modelica/build_multitenant.mos
+
+loadModel(Modelica); getErrorString();
+loadModel(Buildings); getErrorString();
+loadFile("/work/modelica/BuildingSimulator/package.mo"); getErrorString();
+
+nFlo := getEnvironmentVar("NFLOORS");
+nFlo := if nFlo == "" then "3" else nFlo;
+nApe := getEnvironmentVar("NAPTSPERFLOOR");
+nApe := if nApe == "" then "2" else nApe;
+
+loadString("model MultiTenantFMU
+  extends BuildingSimulator.MultiTenantBuilding(nFlo=" + nFlo + ", nApeFlo=" + nApe + ");
+end MultiTenantFMU;"); getErrorString();
+
+setCommandLineOptions("--fmiFlags=s:cvode"); getErrorString();
+buildModelFMU(MultiTenantFMU, version="2.0", fmuType="cs", fileNamePrefix="MultiTenantBuilding");
+getErrorString();

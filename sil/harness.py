@@ -30,14 +30,15 @@ class BuildingFMU:
     def variable_names(self):
         return list(self._vrs)
 
-    def set_inputs(self, **values: float) -> None:
+    def set_inputs(self, values: dict) -> None:
+        # dict-based (not kwargs): FMU names like "yVal[1]" are not identifiers
         vrs = [self._vrs[name] for name in values]
         self._fmu.setReal(vrs, list(values.values()))
 
-    def initialize(self, **start_inputs: float) -> None:
+    def initialize(self, start_inputs: dict = None) -> None:
         self._fmu.enterInitializationMode()
         if start_inputs:
-            self.set_inputs(**start_inputs)
+            self.set_inputs(start_inputs)
         self._fmu.exitInitializationMode()
         self._initialized = True
 
@@ -53,7 +54,8 @@ class BuildingFMU:
         return dict(zip(names, vals))
 
     def close(self) -> None:
-        self._fmu.terminate()
+        if self._initialized:
+            self._fmu.terminate()
         self._fmu.freeInstance()
 
 
@@ -70,7 +72,7 @@ def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
     fmu = BuildingFMU(fmu_path)
     exo0 = scenario(0.0)
     act0 = {name: 0.5 for name in controllers}
-    fmu.initialize(**exo0, **act0)
+    fmu.initialize({**exo0, **act0})
 
     records = []
     record_dt = record_dt or control_dt
@@ -83,7 +85,7 @@ def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
         # controllers observe, then act (sampled control like a real thermostat)
         actions = {name: ctrl.step(t, meas) for name, ctrl in controllers.items()}
         exo = scenario(t)
-        fmu.set_inputs(**exo, **actions)
+        fmu.set_inputs({**exo, **actions})
 
         if t >= next_record:
             records.append({"time": t, **meas, **actions, **exo})
