@@ -1,7 +1,16 @@
 within BuildingSimulator;
 model ApartmentBranch
   "One apartment: radiator valve + EN 442 radiator + single-capacity zone.
-   The valve position is an external input (electronic thermostat in the loop)."
+   The valve position is an external input (electronic thermostat in the loop).
+
+   The valve models a German M30x1.5 TRV insert with 1.5 mm pin stroke:
+   yVal = 0..1 maps to pin lift 0..1.5 mm. The flow characteristic is
+   quick-opening, anchored to Danfoss RA-N 15 data: kv(xp=2K)/kvs =
+   0.73/0.90 = 0.81 at ~0.44 mm lift (30 % stroke, head travel 0.22 mm/K).
+   Sealing dead zone (elastomer seal) up to ~6 % stroke, then a steep rise
+   to ~80 % flow at 30 % stroke, then saturation toward full lift. Seat
+   leakage ~0.04 % of Kvs (rubber seals close tight; the nonzero floor
+   keeps the flow inversion solvable). See docs/valve-modeling.md."
 
   replaceable package Medium = Modelica.Media.Interfaces.PartialMedium;
 
@@ -15,6 +24,11 @@ model ApartmentBranch
     "Effective zone heat capacity";
   parameter Modelica.Units.SI.Temperature T_start = 293.15
     "Initial zone temperature";
+
+  parameter Real yCha[:] = {0, 0.03, 0.06, 0.10, 0.15, 0.22, 0.30, 0.45, 0.65, 1.0}
+    "Valve characteristic: normalized pin lift (1.0 = 1.5 mm stroke)";
+  parameter Real phiCha[:] = {4e-4, 6e-4, 1.2e-3, 0.12, 0.35, 0.60, 0.78, 0.88, 0.94, 1.0}
+    "Valve characteristic: Kv/Kvs, quick-opening (RA-N-like: 80 % flow at 30 % stroke)";
 
   Modelica.Fluid.Interfaces.FluidPort_a port_a(redeclare package Medium = Medium)
     "Supply connection (from riser)";
@@ -33,15 +47,16 @@ model ApartmentBranch
   Modelica.Thermal.HeatTransfer.Interfaces.HeatPort_a heaPorAmb
     "Ambient node (connect to outdoor temperature source)";
 
-  Buildings.Fluid.Actuators.Valves.TwoWayEqualPercentage val(
+  Buildings.Fluid.Actuators.Valves.TwoWayTable val(
     redeclare final package Medium = Medium,
     final m_flow_nominal=m_flow_nominal,
     dpValve_nominal=10000,
     dpFixed_nominal=2000,
-    l=0.01,
     from_dp=true,
     use_strokeTime=true,
-    strokeTime=60) "Radiator valve (60 s full stroke, typical eTRV motor)";
+    strokeTime=60,
+    flowCharacteristics(y=yCha, phi=phiCha))
+    "TRV insert (1.5 mm stroke, sealing dead zone; 60 s full stroke by eTRV motor)";
 
   Buildings.Fluid.HeatExchangers.Radiators.RadiatorEN442_2 rad(
     redeclare final package Medium = Medium,

@@ -11,11 +11,20 @@ valve thermostat (Danfoss Ally / eQ-3 / Homematic class devices):
                        radiator output, plus quantization and noise
 - actuation deadband   the motor only repositions when the commanded change
                        exceeds `position_deadband` (every move costs battery)
+- valve mechanics      German M30x1.5 TRV inserts have a 1.5 mm pin stroke.
+                       Between the motor command and the actual pin position
+                       sits mechanical play (spindle backlash + elastomer,
+                       default 0.1 mm): the pin only follows once the play is
+                       taken up, so opening and closing curves differ. An
+                       optional calibration offset models a device that has
+                       mislocated the closing point
 - travel accounting    total valve travel and move count are recorded as
                        battery-consumption KPIs
 
 The wrapped algorithm sees only what the real device firmware would see:
 the corrupted, sampled temperature. `algorithm.step(t, T_sensed_K) -> [0..1]`.
+Note the flow *characteristic* (sealing dead zone, steep rise, saturation)
+lives in the FMU (plant hydraulics); this module models only the device.
 """
 
 import numpy as np
@@ -62,6 +71,9 @@ class ElectronicThermostat:
                  sensor_tau=600.0,         # s, lag of the bias (metal head heats slowly)
                  sensor_resolution=0.1,    # K
                  sensor_noise_std=0.05,    # K
+                 stroke_mm=1.5,            # pin stroke of German M30x1.5 inserts
+                 backlash_mm=0.10,         # mechanical play motor <-> pin
+                 calibration_offset_mm=0.0,  # error in the device's closing-point estimate
                  seed=0):
         self.temp_output = temp_output
         self.q_rad_output = q_rad_output
@@ -73,10 +85,14 @@ class ElectronicThermostat:
         self.sensor_tau = sensor_tau
         self.sensor_resolution = sensor_resolution
         self.sensor_noise_std = sensor_noise_std
+        self.stroke_mm = stroke_mm
+        self._play = backlash_mm / stroke_mm       # normalized play width
+        self._offset = calibration_offset_mm / stroke_mm
         self._rng = np.random.default_rng(seed)
 
         self._bias = 0.0
-        self._position = 0.0
+        self._position = 0.0   # firmware's commanded motor position
+        self._pin = 0.0        # actual valve pin position (after play)
         self._last_sample = None
         self._last_t = None
 
@@ -85,6 +101,21 @@ class ElectronicThermostat:
         self.n_moves = 0
         # diagnostic log: (t, T_true, T_sensed)
         self.sensor_log = []
+
+    @property
+    def travel_mm(self):
+        return self.travel * self.stroke_mm
+
+    def _pin_position(self):
+        """Mechanical play: the pin follows the motor only once the play
+        is taken up, so opening and closing paths differ (hysteresis)."""
+        target = self._position + self._offset
+        half = self._play / 2.0
+        if target - self._pin > half:
+            self._pin = target - half
+        elif self._pin - target > half:
+            self._pin = target + half
+        return min(1.0, max(0.0, self._pin))
 
     def _sense(self, t, T_true, q_rad):
         # lagged bias toward the radiator-output-proportional target
@@ -110,4 +141,4 @@ class ElectronicThermostat:
                 self.travel += abs(command - self._position)
                 self.n_moves += 1
                 self._position = command
-        return self._position
+        return self._pin_position()

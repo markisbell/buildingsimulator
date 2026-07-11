@@ -63,6 +63,17 @@ Two effects central to distributed thermostat control are built in:
 - **Inter-apartment coupling** — stacked apartments exchange heat through floor/ceiling
   conductances; an unheated apartment "steals" heat from its neighbours.
 
+### Valve realism (German M30 x 1.5 TRV inserts, 1.5 mm pin stroke)
+
+- **In the FMU** (plant hydraulics): table-based flow characteristic
+  (`Buildings.Fluid.Actuators.Valves.TwoWayTable`) with a sealing dead zone up to
+  ~20 % stroke (elastomer seal), a steep quasi-linear rise, and saturation above
+  ~60 % lift; seat leakage 0.04 % of Kvs. Table is a model parameter (`yCha`/`phiCha`
+  in `ApartmentBranch`). 60 s full-stroke actuator filter models the eTRV motor.
+- **In the device model** (`sil/thermostat.py`): 0.1 mm mechanical play between motor
+  command and pin position — opening and closing paths differ (hysteresis) — plus an
+  optional calibration-offset error. Verified by `sil/run_valve_sweep.py`.
+
 ## Prototype model
 
 `PrototypeTwoRooms.mo`: ideal boiler with supply-temperature setpoint → constant-speed
