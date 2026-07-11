@@ -94,6 +94,36 @@
       ]
     },
     {
+      "id": 5,
+      "title": "Radiator flows",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+      "fieldConfig": { "defaults": { "unit": "litreh", "min": 0, "custom": { "lineWidth": 1 } }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "http://api:8010/api/runs/${run}/rows?stride=5",
+          "url_options": { "method": "GET", "data": "" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "ts", "text": "time", "type": "timestamp_epoch" },
+            { "selector": "mFlow_1", "text": "valve 1", "type": "number" },
+            { "selector": "mFlow_2", "text": "valve 2", "type": "number" },
+            { "selector": "mFlow_3", "text": "valve 3", "type": "number" },
+            { "selector": "mFlow_4", "text": "valve 4", "type": "number" },
+            { "selector": "mFlow_5", "text": "valve 5", "type": "number" },
+            { "selector": "mFlow_6", "text": "valve 6", "type": "number" }
+          ]
+        }
+      ]
+    },
+    {
       "id": 3,
       "title": "Boiler power",
       "type": "timeseries",

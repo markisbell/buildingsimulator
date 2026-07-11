@@ -125,9 +125,12 @@ def get_rows(run_id: str, stride: int = Query(5, ge=1, le=100)):
             for raw, clean in names.items():
                 try:
                     v = float(row[raw])
-                    # temperature columns (capital T prefix) as degC for Grafana
+                    # Grafana-friendly units: temperatures (capital T prefix)
+                    # as degC, mass flows as litres/hour
                     if raw.startswith("T"):
                         v = round(v - 273.15, 3)
+                    elif raw.startswith("mFlow"):
+                        v = round(v * 3600.0, 2)
                     rec[clean] = v
                 except (TypeError, ValueError):
                     rec[clean] = None
