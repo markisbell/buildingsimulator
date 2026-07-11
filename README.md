@@ -36,7 +36,11 @@ docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run
 | `modelica/PrototypeTwoRooms.mo` | Minimal two-room prototype |
 | `sil/harness.py` | Generic FMU co-simulation loop (`BuildingFMU`, `run_simulation`) |
 | `sil/controllers.py` | Controller interface + baseline PI thermostat — the SIL slot for control strategies under test |
+| `sil/thermostat.py` | Realistic eTRV device model: sampled control, valve-mounted sensor bias/noise/quantization, actuation deadband, battery KPIs |
+| `sil/kpi.py` | Discomfort (K·h), boiler/pump energy, valve travel KPIs |
+| `sil/scenario_common.py` | Shared weather, heating curve, occupancy schedules |
 | `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |
+| `sil/run_thermostat_comparison.py` | Ideal PI vs realistic eTRV on identical scenario, KPI table |
 | `sil/run_prototype.py` | Prototype scenarios: winter week closed-loop; hydraulic coupling demo |
 | `build/` | Compiled FMUs (generated) |
 | `results/` | Plots + CSV time series (generated) |
@@ -75,6 +79,6 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 
 1. ✅ Toolchain + prototype SIL loop
 2. ✅ Parameterizable multi-tenant model: N floors × M apartments, riser network, central plant
-3. Thermostat realism (sampling, valve travel limits, battery duty cycle) + Gymnasium multi-agent interface
-4. Experiments: adaptive + distributed control; benchmarking against
+3. ✅ Thermostat realism: sampled control, valve-mounted sensor bias, actuation deadband, battery KPIs
+4. Gymnasium multi-agent interface; experiments: adaptive + distributed control; benchmarking against
    [BOPTEST](https://ibpsa.github.io/project1-boptest/) `multizone_residential_hydronic` KPIs

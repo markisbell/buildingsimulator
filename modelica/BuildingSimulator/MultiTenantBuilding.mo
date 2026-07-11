@@ -41,6 +41,8 @@ model MultiTenantBuilding
     "Zone temperature per apartment";
   Modelica.Blocks.Interfaces.RealOutput mFlow[nApt](each unit="kg/s")
     "Radiator mass flow per apartment";
+  Modelica.Blocks.Interfaces.RealOutput QRad[nApt](each unit="W")
+    "Radiator heat output per apartment";
   Modelica.Blocks.Interfaces.RealOutput TSup(unit="K") "Supply water temperature";
   Modelica.Blocks.Interfaces.RealOutput TRet(unit="K") "Return water temperature";
   Modelica.Blocks.Interfaces.RealOutput QBoi(unit="W") "Boiler heat flow";
@@ -151,6 +153,7 @@ equation
     connect(yVal[i], apt[i].yVal);
     connect(apt[i].TRoom, TRoom[i]);
     connect(apt[i].m_flow, mFlow[i]);
+    connect(apt[i].QRad, QRad[i]);
   end for;
   connect(senTSup.T, TSup);
   connect(senTRet.T, TRet);

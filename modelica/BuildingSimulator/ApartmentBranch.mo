@@ -25,6 +25,8 @@ model ApartmentBranch
     "Valve position from external thermostat";
   Modelica.Blocks.Interfaces.RealOutput TRoom(unit="K") "Zone temperature";
   Modelica.Blocks.Interfaces.RealOutput m_flow(unit="kg/s") "Radiator mass flow";
+  Modelica.Blocks.Interfaces.RealOutput QRad(unit="W")
+    "Radiator heat output (for valve-mounted sensor models)";
 
   Modelica.Thermal.HeatTransfer.Interfaces.HeatPort_a heaPorZon
     "Zone node, for coupling to neighbouring apartments";
@@ -39,7 +41,7 @@ model ApartmentBranch
     l=0.01,
     from_dp=true,
     use_strokeTime=true,
-    strokeTime=120) "Radiator valve";
+    strokeTime=60) "Radiator valve (60 s full stroke, typical eTRV motor)";
 
   Buildings.Fluid.HeatExchangers.Radiators.RadiatorEN442_2 rad(
     redeclare final package Medium = Medium,
@@ -73,4 +75,7 @@ equation
   connect(yVal, val.y);
   connect(senT.T, TRoom);
   connect(senM.m_flow, m_flow);
+
+  // heat delivered by the radiator to the zone (port convention: positive into radiator)
+  QRad = -(rad.heatPortCon.Q_flow + rad.heatPortRad.Q_flow);
 end ApartmentBranch;

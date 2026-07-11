@@ -10,7 +10,6 @@ Run inside the container:
   docker run --rm -v ${PWD}:/work -w /work/sil buildingsimulator:dev python3 run_multitenant.py
 """
 
-import math
 import re
 from pathlib import Path
 
@@ -23,15 +22,13 @@ from fmpy import read_model_description
 
 from harness import run_simulation
 from controllers import PIThermostat, ScriptedValve
+from scenario_common import (C2K, DAY, SCHEDULES, day_night_setpoint,
+                             heating_curve, winter_weather)
 
 ROOT = Path(__file__).resolve().parents[1]
 FMU = str(ROOT / "build" / "MultiTenantBuilding.fmu")
 RESULTS = ROOT / "results"
 RESULTS.mkdir(exist_ok=True)
-
-C2K = 273.15
-DAY = 86400.0
-
 
 def apartment_count(fmu_path: str) -> int:
     md = read_model_description(fmu_path)
@@ -46,23 +43,6 @@ MFLOWS = [f"mFlow[{i}]" for i in range(1, N_APT + 1)]
 OUTPUTS = TROOMS + MFLOWS + ["TSup", "TRet", "QBoi", "PPum"]
 
 print(f"FMU has {N_APT} apartments")
-
-
-def heating_curve(t_out_k: float) -> float:
-    t_out = t_out_k - C2K
-    t_sup = 35.0 + (65.0 - 35.0) * (15.0 - t_out) / 25.0
-    return min(max(t_sup, 35.0), 65.0) + C2K
-
-
-def winter_weather(t: float) -> float:
-    return C2K - 2.0 + 4.0 * math.sin(2.0 * math.pi * (t - 10.0 * 3600.0) / DAY)
-
-
-def day_night_setpoint(day_sp, night_sp, day_start_h, day_end_h):
-    def sp(t):
-        hour = (t % DAY) / 3600.0
-        return (day_sp if day_start_h <= hour < day_end_h else night_sp) + C2K
-    return sp
 
 
 def scenario_a():
@@ -105,14 +85,7 @@ def scenario_b():
         t_out = winter_weather(t)
         return {"TOut": t_out, "TSupSet": heating_curve(t_out)}
 
-    schedules = {
-        1: (21.0, 17.0, 6, 22),   # family, long day
-        2: (21.0, 16.0, 8, 20),   # office workers
-        3: None,                  # vacant
-        4: (22.0, 18.0, 7, 23),   # warm preference
-        5: (21.0, 17.0, 6, 21),
-        6: (20.0, 16.0, 9, 18),   # away a lot
-    }
+    schedules = SCHEDULES
     controllers = {}
     for i in range(1, N_APT + 1):
         sched = schedules.get(i)
