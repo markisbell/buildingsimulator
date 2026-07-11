@@ -1,0 +1,24 @@
+services:
+  api:
+    image: buildingsimulator:dev
+    command: uvicorn server.main:app --host 0.0.0.0 --port 8010
+    working_dir: /work
+    volumes:
+      - .:/work
+    ports:
+      - "8010:8010"
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - api

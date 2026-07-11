@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: RunStore
+    uid: runstore
+    type: yesoreyeram-infinity-datasource
+    access: proxy
+    isDefault: true
+    jsonData:
+      allowedHosts:
+        - http://api:8010

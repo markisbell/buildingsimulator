@@ -26,10 +26,16 @@ docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run
 .\scripts\build_fmu.ps1                # compile modelica/PrototypeTwoRooms.mo
 .\scripts\run_prototype.ps1            # run both prototype scenarios
 
-# dashboard: API server (port 8010) + React UI (needs Node.js)
-.\scripts\run_server.ps1               # serves runs/ as REST API
-cd ui; npm install; npm run dev        # dashboard at http://localhost:5173
+# dashboard stack: run-store API (8010) + Grafana (3001)
+docker compose -p buildingsim up -d
+cd ui; npm install; npm run dev        # React dashboard at http://localhost:5173
 ```
+
+Division of labor: the **React dashboard** is the experiment workbench (building view,
+run catalog, KPI board, device inspector); **Grafana** (http://localhost:3001,
+provisioned "buildingsimulator runs" dashboard, Infinity datasource reading the same
+API) covers free-form time-series exploration and live monitoring of long batches —
+and later takes field-measurement data alongside simulations.
 
 Simulation runs persist to `runs/<id>/` (manifest.json + series.csv); the dashboard
 lists them, replays them with a time scrubber, and polls live while a run is in

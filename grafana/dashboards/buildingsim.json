@@ -1,0 +1,150 @@
+{
+  "uid": "buildingsim",
+  "title": "buildingsimulator runs",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "2026-01-12T00:00:00Z", "to": "2026-01-19T00:00:00Z" },
+  "timezone": "utc",
+  "templating": {
+    "list": [
+      {
+        "name": "run",
+        "label": "run",
+        "type": "query",
+        "refresh": 1,
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+        "query": {
+          "refId": "variable",
+          "queryType": "infinity",
+          "infinityQuery": {
+            "refId": "variable",
+            "type": "json",
+            "source": "url",
+            "parser": "backend",
+            "format": "table",
+            "url": "http://api:8010/api/runs",
+            "url_options": { "method": "GET", "data": "" },
+            "root_selector": "",
+            "columns": [{ "selector": "id", "text": "id", "type": "string" }]
+          }
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Room temperatures",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "custom": { "lineWidth": 1 } }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "http://api:8010/api/runs/${run}/rows?stride=5",
+          "url_options": { "method": "GET", "data": "" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "ts", "text": "time", "type": "timestamp_epoch" },
+            { "selector": "TRoom_1", "text": "apt 1", "type": "number" },
+            { "selector": "TRoom_2", "text": "apt 2", "type": "number" },
+            { "selector": "TRoom_3", "text": "apt 3 (vacant)", "type": "number" },
+            { "selector": "TRoom_4", "text": "apt 4", "type": "number" },
+            { "selector": "TRoom_5", "text": "apt 5", "type": "number" },
+            { "selector": "TRoom_6", "text": "apt 6", "type": "number" },
+            { "selector": "TOut", "text": "outdoor", "type": "number" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Valve positions",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "custom": { "lineWidth": 1 } }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "http://api:8010/api/runs/${run}/rows?stride=5",
+          "url_options": { "method": "GET", "data": "" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "ts", "text": "time", "type": "timestamp_epoch" },
+            { "selector": "yVal_1", "text": "apt 1", "type": "number" },
+            { "selector": "yVal_2", "text": "apt 2", "type": "number" },
+            { "selector": "yVal_4", "text": "apt 4", "type": "number" },
+            { "selector": "yVal_5", "text": "apt 5", "type": "number" },
+            { "selector": "yVal_6", "text": "apt 6", "type": "number" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Boiler power",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+      "fieldConfig": { "defaults": { "unit": "watt", "custom": { "lineWidth": 1 } }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "http://api:8010/api/runs/${run}/rows?stride=5",
+          "url_options": { "method": "GET", "data": "" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "ts", "text": "time", "type": "timestamp_epoch" },
+            { "selector": "QBoi", "text": "boiler", "type": "number" },
+            { "selector": "PPum", "text": "pump", "type": "number" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Supply / return temperature",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+      "fieldConfig": { "defaults": { "unit": "celsius", "custom": { "lineWidth": 1 } }, "overrides": [] },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "runstore" },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "http://api:8010/api/runs/${run}/rows?stride=5",
+          "url_options": { "method": "GET", "data": "" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "ts", "text": "time", "type": "timestamp_epoch" },
+            { "selector": "TSup", "text": "supply", "type": "number" },
+            { "selector": "TRet", "text": "return", "type": "number" },
+            { "selector": "TOut", "text": "outdoor", "type": "number" }
+          ]
+        }
+      ]
+    }
+  ]
+}
