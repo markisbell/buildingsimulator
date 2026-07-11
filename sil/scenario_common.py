@@ -40,3 +40,22 @@ SCHEDULES = {
     5: (21.0, 17.0, 6, 21),
     6: (20.0, 16.0, 9, 18),   # away a lot
 }
+
+
+def default_orientations(n_apt):
+    """Odd apartments face south (180 deg), even ones north (0 deg)."""
+    return {i: (180.0 if i % 2 == 1 else 0.0) for i in range(1, n_apt + 1)}
+
+
+def make_winter_scenario(n_apt, cloudiness=0.4, days=8):
+    """Winter scenario with synthetic weather AND facade solar gains.
+    Returns (exogenous_fn, solar_model)."""
+    from solar import SolarGainModel
+    sol = SolarGainModel(default_orientations(n_apt), days=days,
+                         cloudiness=cloudiness)
+
+    def exogenous(t):
+        t_out = winter_weather(t)
+        return {"TOut": t_out, "TSupSet": heating_curve(t_out), **sol.gains(t)}
+
+    return exogenous, sol

@@ -22,7 +22,7 @@ from harness import run_simulation
 from controllers import PIThermostat, ScriptedValve
 from thermostat import ElectronicThermostat, SampledPI
 from scenario_common import (C2K, DAY, SCHEDULES, day_night_setpoint,
-                             winter_exogenous)
+                             make_winter_scenario)
 import kpi
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +40,9 @@ OUTPUTS = ([f"TRoom[{i}]" for i in range(1, N_APT + 1)]
 
 DURATION = 7 * DAY
 CONTROL_DT = 60.0
+
+# same weather + solar gains for both runs (south/north facade split)
+EXOGENOUS, SOLAR = make_winter_scenario(N_APT)
 
 
 def build_ideal():
@@ -91,9 +94,18 @@ def occupied_discomfort(df, schedules):
     return total
 
 
+def occupied_overheating(df, schedules):
+    total = 0.0
+    for i, sched in schedules.items():
+        if sched is None:
+            continue
+        total += kpi.overheat_kh(df, f"TRoom[{i}]", day_night_setpoint(*sched))
+    return total
+
+
 def run(name, controllers):
     print(f"running: {name} ...")
-    records = run_simulation(FMU, controllers, winter_exogenous,
+    records = run_simulation(FMU, controllers, EXOGENOUS,
                              duration=DURATION, control_dt=CONTROL_DT,
                              output_names=OUTPUTS, record_dt=CONTROL_DT)
     df = pd.DataFrame(records)
@@ -118,6 +130,9 @@ def main():
         ("discomfort (K*h, days 2-7, all apts)",
          occupied_discomfort(df_ideal, SCHEDULES),
          occupied_discomfort(df_real, SCHEDULES)),
+        ("overheating (K*h > setpoint+1K, days 2-7)",
+         occupied_overheating(df_ideal, SCHEDULES),
+         occupied_overheating(df_real, SCHEDULES)),
         ("boiler energy (kWh, days 2-7)",
          kpi.boiler_energy_kwh(df_ideal), kpi.boiler_energy_kwh(df_real)),
         ("pump energy (kWh, days 2-7)",

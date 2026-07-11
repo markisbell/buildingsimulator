@@ -23,7 +23,7 @@ from fmpy import read_model_description
 from harness import run_simulation
 from controllers import PIThermostat, ScriptedValve
 from scenario_common import (C2K, DAY, SCHEDULES, day_night_setpoint,
-                             heating_curve, winter_weather)
+                             make_winter_scenario)
 
 ROOT = Path(__file__).resolve().parents[1]
 FMU = str(ROOT / "build" / "MultiTenantBuilding.fmu")
@@ -79,11 +79,11 @@ def scenario_a():
 
 
 def scenario_b():
-    print("Scenario B: winter week, PI per apartment, apartment 3 vacant ...")
+    print("Scenario B: winter week with solar gains, apartment 3 vacant ...")
 
-    def exogenous(t):
-        t_out = winter_weather(t)
-        return {"TOut": t_out, "TSupSet": heating_curve(t_out)}
+    exogenous, sol = make_winter_scenario(N_APT)
+    print(f"  peak solar gain south: {sol.peak_w(1):.0f} W, "
+          f"north: {sol.peak_w(2):.0f} W")
 
     schedules = SCHEDULES
     controllers = {}

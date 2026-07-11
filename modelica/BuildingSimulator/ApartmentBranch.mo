@@ -18,10 +18,19 @@ model ApartmentBranch
     "Radiator heat output at 60/40/20";
   parameter Modelica.Units.SI.MassFlowRate m_flow_nominal = Q_flow_nominal/4186/20
     "Design mass flow";
-  parameter Modelica.Units.SI.ThermalConductance UA = 120
-    "Envelope conductance to outdoor";
-  parameter Modelica.Units.SI.HeatCapacity C = 15e6
-    "Effective zone heat capacity";
+  // 2R2C zone: fast air node + slow structural mass node
+  parameter Modelica.Units.SI.HeatCapacity C_air = 1.5e6
+    "Air + furnishing capacity (fast node)";
+  parameter Modelica.Units.SI.HeatCapacity C_mass = 13.5e6
+    "Structural mass capacity (slow node)";
+  parameter Modelica.Units.SI.ThermalConductance G_win = 40
+    "Air node to outdoor: windows + infiltration (fast losses)";
+  parameter Modelica.Units.SI.ThermalConductance G_wall = 90
+    "Mass node to outdoor: opaque envelope";
+  parameter Modelica.Units.SI.ThermalConductance G_int = 600
+    "Air to internal surfaces (convective/radiative exchange)";
+  parameter Real fraGainAir = 0.3
+    "Fraction of QGain hitting the air node (rest absorbed by mass)";
   parameter Modelica.Units.SI.Temperature T_start = 293.15
     "Initial zone temperature";
 
@@ -37,6 +46,8 @@ model ApartmentBranch
 
   Modelica.Blocks.Interfaces.RealInput yVal(min=0, max=1)
     "Valve position from external thermostat";
+  Modelica.Blocks.Interfaces.RealInput QGain(unit="W")
+    "Solar + internal heat gains into the zone";
   Modelica.Blocks.Interfaces.RealOutput TRoom(unit="K") "Zone temperature";
   Modelica.Blocks.Interfaces.RealOutput m_flow(unit="kg/s") "Radiator mass flow";
   Modelica.Blocks.Interfaces.RealOutput QRad(unit="W")
@@ -70,11 +81,24 @@ model ApartmentBranch
 
   Buildings.Fluid.Sensors.MassFlowRate senM(redeclare final package Medium = Medium);
 
-  Modelica.Thermal.HeatTransfer.Components.HeatCapacitor cap(
-    final C=C, T(start=T_start, fixed=true)) "Zone thermal mass";
-  Modelica.Thermal.HeatTransfer.Components.ThermalConductor conExt(final G=UA)
-    "Envelope conductance";
+  Modelica.Thermal.HeatTransfer.Components.HeatCapacitor capAir(
+    final C=C_air, T(start=T_start, fixed=true)) "Air node";
+  Modelica.Thermal.HeatTransfer.Components.HeatCapacitor capMass(
+    final C=C_mass, T(start=T_start, fixed=true)) "Structural mass node";
+  Modelica.Thermal.HeatTransfer.Components.ThermalConductor conWin(final G=G_win)
+    "Windows + infiltration";
+  Modelica.Thermal.HeatTransfer.Components.ThermalConductor conWall(final G=G_wall)
+    "Opaque envelope";
+  Modelica.Thermal.HeatTransfer.Components.ThermalConductor conInt(final G=G_int)
+    "Air <-> internal surfaces";
   Modelica.Thermal.HeatTransfer.Sensors.TemperatureSensor senT;
+
+  Modelica.Thermal.HeatTransfer.Sources.PrescribedHeatFlow preGainAir
+    "Gain share to air node";
+  Modelica.Thermal.HeatTransfer.Sources.PrescribedHeatFlow preGainMass
+    "Gain share to mass node";
+  Modelica.Blocks.Math.Gain gaiAir(final k=fraGainAir);
+  Modelica.Blocks.Math.Gain gaiMass(final k=1 - fraGainAir);
 
 equation
   connect(port_a, val.port_a);
@@ -82,12 +106,25 @@ equation
   connect(rad.port_b, senM.port_a);
   connect(senM.port_b, port_b);
 
-  connect(rad.heatPortCon, cap.port);
-  connect(rad.heatPortRad, cap.port);
-  connect(conExt.port_a, cap.port);
-  connect(conExt.port_b, heaPorAmb);
-  connect(cap.port, heaPorZon);
-  connect(senT.port, cap.port);
+  // 2R2C zone: convective heat to the air node, radiative to the surfaces
+  connect(rad.heatPortCon, capAir.port);
+  connect(rad.heatPortRad, capMass.port);
+  connect(conWin.port_a, capAir.port);
+  connect(conWin.port_b, heaPorAmb);
+  connect(conWall.port_a, capMass.port);
+  connect(conWall.port_b, heaPorAmb);
+  connect(conInt.port_a, capAir.port);
+  connect(conInt.port_b, capMass.port);
+  connect(capMass.port, heaPorZon);
+  connect(senT.port, capAir.port);
+
+  // solar + internal gains, split between air and mass
+  connect(QGain, gaiAir.u);
+  connect(QGain, gaiMass.u);
+  connect(gaiAir.y, preGainAir.Q_flow);
+  connect(gaiMass.y, preGainMass.Q_flow);
+  connect(preGainAir.port, capAir.port);
+  connect(preGainMass.port, capMass.port);
 
   connect(yVal, val.y);
   connect(senT.T, TRoom);

@@ -18,10 +18,6 @@ model MultiTenantBuilding
   final parameter Modelica.Units.SI.MassFlowRate m_flow_nominal_tot =
     nApt*m_flow_nominal_rad "Design total flow";
 
-  parameter Modelica.Units.SI.ThermalConductance UA_apt = 120
-    "Envelope conductance per apartment";
-  parameter Modelica.Units.SI.HeatCapacity C_apt = 15e6
-    "Effective heat capacity per apartment";
   parameter Modelica.Units.SI.ThermalConductance G_vert = 150
     "Floor/ceiling conductance between stacked apartments";
   parameter Modelica.Units.SI.PressureDifference dpPipe_nominal = 500
@@ -34,6 +30,8 @@ model MultiTenantBuilding
   // ---------- SIL interface ----------
   Modelica.Blocks.Interfaces.RealInput yVal[nApt](each min=0, each max=1)
     "Valve position per apartment (external thermostats)";
+  Modelica.Blocks.Interfaces.RealInput QGain[nApt](each unit="W")
+    "Solar + internal gains per apartment";
   Modelica.Blocks.Interfaces.RealInput TOut(unit="K") "Outdoor air temperature";
   Modelica.Blocks.Interfaces.RealInput TSupSet(unit="K") "Supply temperature setpoint";
 
@@ -53,9 +51,7 @@ model MultiTenantBuilding
   // ---------- Apartments ----------
   BuildingSimulator.ApartmentBranch apt[nApt](
     redeclare each final package Medium = MediumW,
-    each Q_flow_nominal=QRad_nominal,
-    each UA=UA_apt,
-    each C=C_apt) "Apartment branches";
+    each Q_flow_nominal=QRad_nominal) "Apartment branches";
 
   Modelica.Thermal.HeatTransfer.Components.ThermalConductor conVer[nApt - nApeFlo](
     each G=G_vert) "Vertical coupling between stacked apartments";
@@ -156,6 +152,7 @@ equation
   connect(TOut, preTOut.T);
   for i in 1:nApt loop
     connect(yVal[i], apt[i].yVal);
+    connect(QGain[i], apt[i].QGain);
     connect(apt[i].TRoom, TRoom[i]);
     connect(apt[i].m_flow, mFlow[i]);
     connect(apt[i].QRad, QRad[i]);

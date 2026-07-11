@@ -19,6 +19,18 @@ def discomfort_kh(df, temp_col, setpoint_fn, t_start=86400.0):
     return sum(dev) * dt_h
 
 
+def overheat_kh(df, temp_col, setpoint_fn, tol=1.0, t_start=86400.0):
+    """Integral of (T - setpoint - tol)+ in K*h — overheating, e.g. from
+    solar gains the controller fails to reject."""
+    d = df[df["time"] >= t_start]
+    if len(d) < 2:
+        return 0.0
+    dt_h = (d["time"].iloc[1] - d["time"].iloc[0]) / 3600.0
+    dev = [max(0.0, T - setpoint_fn(t) - tol)
+           for t, T in zip(d["time"], d[temp_col])]
+    return sum(dev) * dt_h
+
+
 def boiler_energy_kwh(df, t_start=86400.0):
     d = df[df["time"] >= t_start]
     hours = (d["time"].iloc[-1] - d["time"].iloc[0]) / 3600.0

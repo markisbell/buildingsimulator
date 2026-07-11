@@ -39,7 +39,8 @@ docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run
 | `sil/thermostat.py` | Realistic eTRV device model: sampled control, valve-mounted sensor bias/noise/quantization, actuation deadband, adaptation run, battery KPIs |
 | `sil/actuator.py` | Valve actuator mechanics: pin force (spring/seal/friction/Δp), motor current with noise+ADC, backlash, unknown mechanical zero |
 | `sil/kpi.py` | Discomfort (K·h), boiler/pump energy, valve travel KPIs |
-| `sil/scenario_common.py` | Shared weather, heating curve, occupancy schedules |
+| `sil/scenario_common.py` | Shared weather, heating curve, occupancy schedules, winter scenario factory |
+| `sil/solar.py` | Facade solar gains via pvlib (clear-sky + cloudiness, per-apartment orientation) |
 | `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |
 | `sil/run_thermostat_comparison.py` | Ideal PI vs realistic eTRV on identical scenario, KPI table |
 | `sil/run_prototype.py` | Prototype scenarios: winter week closed-loop; hydraulic coupling demo |
@@ -55,14 +56,25 @@ radiator behind an equal-percentage valve, single-capacity zone). Floor and apar
 counts are compile-time parameters (`.\scripts\build_multitenant_fmu.ps1 -Floors N
 -ApartmentsPerFloor M`).
 
-FMU inputs: `yVal[i]` per apartment, `TOut`, `TSupSet`.
-FMU outputs: `TRoom[i]`, `mFlow[i]`, `TSup`, `TRet`, `QBoi`, `PPum`.
+FMU inputs: `yVal[i]`, `QGain[i]` (solar + internal gains) per apartment, `TOut`, `TSupSet`.
+FMU outputs: `TRoom[i]`, `mFlow[i]`, `QRad[i]`, `dpVal[i]`, `TSup`, `TRet`, `QBoi`, `PPum`.
 
-Two effects central to distributed thermostat control are built in:
+Zones are 2R2C (fast air node + slow structural mass node): the air responds to solar
+bursts and radiator action within minutes while the building mass stays slow. Weather
+comes from Python: synthetic sinusoidal `TOut` plus **facade solar gains** via
+[pvlib](https://pvlib-python.readthedocs.io/) (clear-sky Ineichen with cloudiness
+factor, per-apartment facade orientation, window area × g-value × shading;
+`sil/solar.py`). Measured weather (DWD TRY / EPW) can replace the synthetic model via
+`pvlib.iotools` without touching the FMU.
+
+Effects central to distributed thermostat control that are built in:
 - **Riser hydraulics** — upper floors see less differential pressure, so open valves on
   the ground floor starve the top floor (unbalanced system, no static balancing valves).
 - **Inter-apartment coupling** — stacked apartments exchange heat through floor/ceiling
   conductances; an unheated apartment "steals" heat from its neighbours.
+- **Facade asymmetry** — south apartments get kW-scale midday solar gains in clear
+  winter weather while north apartments see only diffuse light; thermostats must reject
+  an apartment-specific disturbance (overheating KPI tracks failures).
 
 ### Valve realism (German M30 x 1.5 TRV inserts, 1.5 mm pin stroke)
 
