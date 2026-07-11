@@ -35,6 +35,7 @@ N_APT = len([v for v in md.modelVariables if re.fullmatch(r"TRoom\[\d+\]", v.nam
 OUTPUTS = ([f"TRoom[{i}]" for i in range(1, N_APT + 1)]
            + [f"mFlow[{i}]" for i in range(1, N_APT + 1)]
            + [f"QRad[{i}]" for i in range(1, N_APT + 1)]
+           + [f"dpVal[{i}]" for i in range(1, N_APT + 1)]
            + ["TSup", "TRet", "QBoi", "PPum"])
 
 DURATION = 7 * DAY
@@ -63,6 +64,7 @@ def build_realistic():
             controllers[f"yVal[{i}]"] = ElectronicThermostat(
                 temp_output=f"TRoom[{i}]",
                 q_rad_output=f"QRad[{i}]",
+                dp_output=f"dpVal[{i}]",
                 algorithm=SampledPI(day_night_setpoint(*sched)),
                 seed=i)
     return controllers
@@ -126,6 +128,13 @@ def main():
     print(f"\n{'KPI':45s} {'ideal PI':>12s} {'real eTRV':>12s}")
     for label, vi, vr in rows:
         print(f"{label:45s} {vi:12.1f} {vr:12.1f}")
+
+    errs = [abs(th.adaptation["zero_error_mm"]) for th in thermostats
+            if th.adaptation is not None]
+    if errs:
+        print(f"\nadaptation runs: {len(errs)} devices, "
+              f"zero-estimate error {min(errs):.3f}-{max(errs):.3f} mm "
+              f"(mean {sum(errs)/len(errs):.3f} mm)")
 
     # ---------- plots ----------
     sched1 = day_night_setpoint(*SCHEDULES[1])

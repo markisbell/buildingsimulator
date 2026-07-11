@@ -24,7 +24,7 @@ from fmpy import read_model_description
 
 from harness import run_simulation
 from controllers import ScriptedValve
-from thermostat import ElectronicThermostat, SampledPI
+from actuator import ValveActuator
 from scenario_common import C2K
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,14 +69,12 @@ def fmu_sweep():
 
 
 def device_hysteresis():
-    """Drive the mechanical play operator with a slow triangle command."""
-    th = ElectronicThermostat("T", "Q", SampledPI(294.15), backlash_mm=0.10)
+    """Drive the actuator with a slow triangle command (perfectly calibrated
+    device, so the plot isolates the mechanical play)."""
+    act = ValveActuator(backlash_mm=0.10, initial_zero_error_mm=0.0)
     cmd = np.concatenate([np.linspace(0, 1, 200), np.linspace(1, 0, 200)])
-    pin = []
-    for c in cmd:
-        th._position = c
-        pin.append(th._pin_position())
-    return cmd, np.array(pin)
+    pin = np.array([act.command_opening(c) for c in cmd])
+    return cmd, pin
 
 
 def main():
@@ -118,7 +116,11 @@ def main():
     anchor = up[(up["yVal[1]"] - 0.3).abs() < 0.01]["mFlow[1]"].mean() / m_max * 100
     print(f"  flow at <=6 % stroke:  {dead:.2f} % of max (dead zone)")
     print(f"  flow at 30 % stroke:   {anchor:.1f} % of max (RA-N anchor: ~81 %)")
-    print(f"  hysteresis width:      {(cmd[199] - pin[199]) * 1.5:.2f} mm equivalent")
+    # gap between opening and closing branches at mid-command = play width
+    mid_up = pin[np.argmin(np.abs(cmd[:200] - 0.5))]
+    mid_dn = pin[200 + np.argmin(np.abs(cmd[200:] - 0.5))]
+    print(f"  hysteresis width:      {abs(mid_dn - mid_up) * 1.5:.2f} mm "
+          f"(branch gap at mid-stroke)")
     print("done — plot in results/valve_sweep.png")
 
 

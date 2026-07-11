@@ -36,7 +36,8 @@ docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run
 | `modelica/PrototypeTwoRooms.mo` | Minimal two-room prototype |
 | `sil/harness.py` | Generic FMU co-simulation loop (`BuildingFMU`, `run_simulation`) |
 | `sil/controllers.py` | Controller interface + baseline PI thermostat — the SIL slot for control strategies under test |
-| `sil/thermostat.py` | Realistic eTRV device model: sampled control, valve-mounted sensor bias/noise/quantization, actuation deadband, battery KPIs |
+| `sil/thermostat.py` | Realistic eTRV device model: sampled control, valve-mounted sensor bias/noise/quantization, actuation deadband, adaptation run, battery KPIs |
+| `sil/actuator.py` | Valve actuator mechanics: pin force (spring/seal/friction/Δp), motor current with noise+ADC, backlash, unknown mechanical zero |
 | `sil/kpi.py` | Discomfort (K·h), boiler/pump energy, valve travel KPIs |
 | `sil/scenario_common.py` | Shared weather, heating curve, occupancy schedules |
 | `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |

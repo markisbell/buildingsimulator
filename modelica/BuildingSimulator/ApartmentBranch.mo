@@ -41,6 +41,8 @@ model ApartmentBranch
   Modelica.Blocks.Interfaces.RealOutput m_flow(unit="kg/s") "Radiator mass flow";
   Modelica.Blocks.Interfaces.RealOutput QRad(unit="W")
     "Radiator heat output (for valve-mounted sensor models)";
+  Modelica.Blocks.Interfaces.RealOutput dpVal(unit="Pa")
+    "Pressure drop across the valve (for actuator force models)";
 
   Modelica.Thermal.HeatTransfer.Interfaces.HeatPort_a heaPorZon
     "Zone node, for coupling to neighbouring apartments";
@@ -93,4 +95,5 @@ equation
 
   // heat delivered by the radiator to the zone (port convention: positive into radiator)
   QRad = -(rad.heatPortCon.Q_flow + rad.heatPortRad.Q_flow);
+  dpVal = val.dp;
 end ApartmentBranch;

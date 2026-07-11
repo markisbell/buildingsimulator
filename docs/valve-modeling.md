@@ -95,7 +95,31 @@ standard `addPowerToMedium=false` simplification. The honest long-term fix is mo
 distribution pipe heat losses — which are research-relevant anyway (riser losses,
 return temperatures) and are on the roadmap.
 
-## 4. Sources
+## 4. Motor current model and adaptation run
+
+The actuator model ([`sil/actuator.py`](../sil/actuator.py)) closes the loop between
+firmware and mechanics. Pin load = return spring (preload + rate) + Coulomb friction +
+elastomer seal stiffness once the plug enters the seal zone + hydraulic force
+(Δp × seat area, ~0.2 N at 10 kPa — realistically invisible against the tens of
+newtons of seal force, which the model reproduces). Motor current = baseline +
+k · pin force, with noise and ADC quantization; the firmware never sees true positions
+or forces, only its own encoder coordinate and this current signal.
+
+`ElectronicThermostat.adaptation_run()` implements the commissioning routine of
+commercial eTRVs: drive closed, detect the current knee (seal contact) and the stall
+threshold, take the stall position as zero reference. Findings from the demo
+(`sil/run_adaptation_demo.py`, `results/adaptation_run.png`):
+
+- The zero estimate carries a **systematic ≈ −80 µm bias** (backlash minus seal
+  compression at the stall threshold) with only ~4 µm noise spread. The naive
+  "stall = zero" firmware convention therefore biases all commanded openings ~5 % of
+  stroke low — a repeatable, identifiable error: a target for adaptive strategies.
+- The knee-to-stall distance underestimates the true seal zone (40 µm vs 90 µm) due to
+  conservative knee detection — same story.
+- Each adaptation run costs ~1.9 mm valve travel (battery KPI) and ~75 s with the
+  valve closed.
+
+## 5. Sources
 
 - [Danfoss RA-N valve bodies datasheet](https://assets.danfoss.com/documents/latest/101560/AI000086404260en-010201.pdf) — kv/kvs tables, xp = 2 K definition, max Δp
 - [Danfoss RA-N radiator valves (overview)](https://assets.danfoss.com/documents/latest/107418/AI007486472573en-010201.pdf)

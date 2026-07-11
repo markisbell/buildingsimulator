@@ -12,12 +12,16 @@ valve thermostat (Danfoss Ally / eQ-3 / Homematic class devices):
 - actuation deadband   the motor only repositions when the commanded change
                        exceeds `position_deadband` (every move costs battery)
 - valve mechanics      German M30x1.5 TRV inserts have a 1.5 mm pin stroke.
-                       Between the motor command and the actual pin position
-                       sits mechanical play (spindle backlash + elastomer,
-                       default 0.1 mm): the pin only follows once the play is
-                       taken up, so opening and closing curves differ. An
-                       optional calibration offset models a device that has
-                       mislocated the closing point
+                       An actuator model (actuator.py) sits between firmware
+                       and pin: mechanical play (0.1 mm), a true mechanical
+                       zero the firmware does not know, and a motor-current
+                       measurement (force through spring, seal contact and
+                       friction, with noise and ADC quantization)
+- adaptation run       on first activation (auto_adapt) the firmware drives
+                       the valve closed, watches the current trace for the
+                       seal-contact knee and the stall threshold, and takes
+                       the stall position as its zero reference - exactly
+                       like commercial eTRVs after mounting
 - travel accounting    total valve travel and move count are recorded as
                        battery-consumption KPIs
 
@@ -28,6 +32,8 @@ lives in the FMU (plant hydraulics); this module models only the device.
 """
 
 import numpy as np
+
+from actuator import ValveActuator
 
 
 class SampledPI:
@@ -64,6 +70,7 @@ class ElectronicThermostat:
     """
 
     def __init__(self, temp_output, q_rad_output, algorithm,
+                 dp_output=None,           # FMU output with valve dp (hydraulic force)
                  q_rad_nominal=4500.0,
                  sample_interval=300.0,
                  position_deadband=0.05,
@@ -71,12 +78,14 @@ class ElectronicThermostat:
                  sensor_tau=600.0,         # s, lag of the bias (metal head heats slowly)
                  sensor_resolution=0.1,    # K
                  sensor_noise_std=0.05,    # K
-                 stroke_mm=1.5,            # pin stroke of German M30x1.5 inserts
-                 backlash_mm=0.10,         # mechanical play motor <-> pin
-                 calibration_offset_mm=0.0,  # error in the device's closing-point estimate
+                 auto_adapt=True,          # adaptation run on first activation
+                 stall_ma=45.0,            # firmware stall-detection threshold
+                 knee_delta_ma=8.0,        # firmware knee detection above baseline
+                 actuator=None,            # ValveActuator (default one is created)
                  seed=0):
         self.temp_output = temp_output
         self.q_rad_output = q_rad_output
+        self.dp_output = dp_output
         self.algorithm = algorithm
         self.q_rad_nominal = q_rad_nominal
         self.sample_interval = sample_interval
@@ -85,37 +94,64 @@ class ElectronicThermostat:
         self.sensor_tau = sensor_tau
         self.sensor_resolution = sensor_resolution
         self.sensor_noise_std = sensor_noise_std
-        self.stroke_mm = stroke_mm
-        self._play = backlash_mm / stroke_mm       # normalized play width
-        self._offset = calibration_offset_mm / stroke_mm
+        self.auto_adapt = auto_adapt
+        self.stall_ma = stall_ma
+        self.knee_delta_ma = knee_delta_ma
+        self.actuator = actuator or ValveActuator(seed=seed + 1000)
         self._rng = np.random.default_rng(seed)
 
         self._bias = 0.0
-        self._position = 0.0   # firmware's commanded motor position
-        self._pin = 0.0        # actual valve pin position (after play)
+        self._position = 0.0   # firmware's commanded opening (0..1)
         self._last_sample = None
         self._last_t = None
+        self._adapt_until = None
+        self.adaptation = None  # diagnostics of the last adaptation run
 
-        # battery KPIs
-        self.travel = 0.0
+        # battery KPIs (move count; travel comes from the actuator)
         self.n_moves = 0
         # diagnostic log: (t, T_true, T_sensed)
         self.sensor_log = []
 
     @property
     def travel_mm(self):
-        return self.travel * self.stroke_mm
+        return self.actuator.travel_mm
 
-    def _pin_position(self):
-        """Mechanical play: the pin follows the motor only once the play
-        is taken up, so opening and closing paths differ (hysteresis)."""
-        target = self._position + self._offset
-        half = self._play / 2.0
-        if target - self._pin > half:
-            self._pin = target - half
-        elif self._pin - target > half:
-            self._pin = target + half
-        return min(1.0, max(0.0, self._pin))
+    @property
+    def travel(self):
+        """Valve travel in full strokes (for kpi.battery_kpis)."""
+        return self.actuator.travel_mm / self.actuator.stroke_mm
+
+    def adaptation_run(self, t, dp_pa=0.0):
+        """Drive closed, watch the motor current, take the stall position as
+        the zero reference — the commissioning routine of commercial eTRVs."""
+        act = self.actuator
+        trace, duration = act.close_until_stall(stall_ma=self.stall_ma, dp_pa=dp_pa)
+        currents = [i for _, i in trace]
+        positions = [p for p, _ in trace]
+        n_base = max(3, len(trace) // 4)
+        baseline = float(np.median(currents[:n_base]))
+        knee_mm = None
+        run = 0
+        for pos, i in trace:
+            run = run + 1 if i > baseline + self.knee_delta_ma else 0
+            if run >= 3:
+                knee_mm = pos
+                break
+        act.zero_est_mm = positions[-1]  # firmware zero := stall position
+        self._position = 0.0
+        self._adapt_until = t + duration
+        self.n_moves += 1
+        self.adaptation = {
+            "t": t,
+            "duration_s": duration,
+            "baseline_ma": baseline,
+            "knee_mm": knee_mm,
+            "stall_mm": positions[-1],
+            "zero_error_mm": act.zero_est_mm - act.true_zero_mm,
+            "seal_est_mm": (knee_mm - positions[-1]) if knee_mm else None,
+            "trace": trace,
+        }
+        return self.adaptation
 
     def _sense(self, t, T_true, q_rad):
         # lagged bias toward the radiator-output-proportional target
@@ -127,9 +163,18 @@ class ElectronicThermostat:
         return round(raw / self.sensor_resolution) * self.sensor_resolution
 
     def step(self, t, measurements):
+        dp = measurements.get(self.dp_output, 0.0) if self.dp_output else 0.0
         T_sensed = self._sense(t, measurements[self.temp_output],
                                measurements[self.q_rad_output])
         self._last_t = t
+
+        # commissioning: locate the mechanical zero before controlling
+        if self.auto_adapt and self.adaptation is None:
+            self.adaptation_run(t, dp_pa=dp)
+        if self._adapt_until is not None:
+            if t < self._adapt_until:
+                return self.actuator.pin_fraction()  # motor still traveling
+            self._adapt_until = None
 
         if self._last_sample is None or t - self._last_sample >= self.sample_interval:
             self._last_sample = t
@@ -138,7 +183,7 @@ class ElectronicThermostat:
             # reposition only if worth the battery (or hitting an end stop)
             if (abs(command - self._position) >= self.position_deadband
                     or (command in (0.0, 1.0) and command != self._position)):
-                self.travel += abs(command - self._position)
                 self.n_moves += 1
                 self._position = command
-        return self._pin_position()
+                return self.actuator.command_opening(command, dp_pa=dp)
+        return self.actuator.pin_fraction()
