@@ -24,7 +24,9 @@ from fmpy import read_model_description
 
 from harness import run_simulation
 from controllers import PIThermostat
+from runstore import create_run
 from scenario_common import C2K, DAY
+import kpi
 
 ROOT = Path(__file__).resolve().parents[1]
 FMU = str(ROOT / "build" / "Building80s.fmu")
@@ -66,6 +68,53 @@ def controllers_ideal():
             for k in range(1, N_ZON + 1)}
 
 
+ROOM_SHORT = ["living", "bed", "kitchen", "bath"] * 2
+
+
+def rooms_meta():
+    rooms = []
+    for k in range(1, N_ZON + 1):
+        s = stack_of(k)
+        floor = (k - 1) // 8 + 1
+        rooms.append({
+            "id": k,
+            "floor": floor,
+            "facade": "south" if ORIENT[s + 1] == 180.0 else "north",
+            "vacant": False,
+            "controller": "ideal PI",
+            "room": f"{ROOM_SHORT[s]} A{1 if s < 4 else 2}",
+            "schedule": f"{SETPOINTS[s]:g} °C const",
+        })
+    return rooms
+
+
+def store_run(name, records, duration_days):
+    """Register a Building80s verification run in the run store."""
+    writer = create_run(name, {
+        "durationDays": duration_days,
+        "building": {"floors": N_FLO, "apartmentsPerFloor": 8,
+                     "model": "Building80s"},
+        "scenario": {"weather": name, "startDate": "2026-01-12"},
+        "apartments": rooms_meta(),
+    })
+    for rec in records:
+        writer.append(rec)
+    df = pd.DataFrame(records)
+    discomfort = sum(kpi.discomfort_kh(
+        df, f"TRoom[{k}]", lambda t, sp=SETPOINTS[stack_of(k)]: sp + C2K)
+        for k in range(1, N_ZON + 1))
+    overheat = sum(kpi.overheat_kh(
+        df, f"TRoom[{k}]", lambda t, sp=SETPOINTS[stack_of(k)]: sp + C2K)
+        for k in range(1, N_ZON + 1))
+    writer.finish(kpis={
+        "discomfortKh": round(discomfort, 1),
+        "overheatKh": round(overheat, 1),
+        "boilerKwh": round(kpi.boiler_energy_kwh(df), 1),
+        "pumpKwh": round(kpi.pump_energy_kwh(df), 2),
+    })
+    print(f"  stored as run: {writer.manifest['id']}")
+
+
 def check(label, ok, detail):
     print(f"  [{'PASS' if ok else 'FAIL'}] {label}: {detail}")
     return ok
@@ -82,6 +131,7 @@ def scenario_design_day():
     records = run_simulation(FMU, controllers_ideal(), exogenous,
                              duration=3 * DAY, control_dt=60.0,
                              output_names=OUTPUTS, record_dt=300.0)
+    store_run("design-day-80s", records, 3)
     df = pd.DataFrame(records)
     df.to_csv(RESULTS / "design_day_80s.csv", index=False)
     d = df[df["time"] >= 2 * DAY]  # steady day 3
@@ -167,6 +217,7 @@ def scenario_typical_day():
     records = run_simulation(FMU, controllers_ideal(), exogenous,
                              duration=2 * DAY, control_dt=60.0,
                              output_names=OUTPUTS, record_dt=300.0)
+    store_run("typical-day-80s", records, 2)
     df = pd.DataFrame(records)
     df.to_csv(RESULTS / "typical_day_80s.csv", index=False)
     d = df[df["time"] >= DAY]
