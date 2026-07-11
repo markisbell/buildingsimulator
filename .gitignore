@@ -6,3 +6,7 @@ __pycache__/
 
 # local tool settings
 .claude/
+
+# ui
+ui/node_modules/
+ui/dist/

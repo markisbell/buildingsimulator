@@ -44,6 +44,7 @@ docker run --rm -v "${PWD}:/work" -w /work/sil buildingsimulator:dev python3 run
 | `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |
 | `sil/run_thermostat_comparison.py` | Ideal PI vs realistic eTRV on identical scenario, KPI table |
 | `sil/run_prototype.py` | Prototype scenarios: winter week closed-loop; hydraulic coupling demo |
+| `ui/` | React dashboard (Vite + Recharts): building view, plant panel, KPI board, time scrubber, device inspector — currently on mock data shaped like the future run-store API |
 | `build/` | Compiled FMUs (generated) |
 | `results/` | Plots + CSV time series (generated) |
 | `docs/` | Research report, BOPTEST setup |
