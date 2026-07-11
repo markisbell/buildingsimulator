@@ -52,7 +52,7 @@ highlighted).
 | Path | Content |
 |------|---------|
 | `docker/` | Toolchain image definition |
-| `modelica/BuildingSimulator/` | Modelica package: `ApartmentBranch` (valve + radiator + zone), `MultiTenantBuilding` (riser network + plant) |
+| `modelica/BuildingSimulator/` | Modelica package: `ApartmentBranch` (valve + radiator + 2R2C zone), `MultiTenantBuilding` (generic building), `Building80s` (verified 1979-83 German MFH, room-resolved, 90/70) |
 | `modelica/PrototypeTwoRooms.mo` | Minimal two-room prototype |
 | `sil/harness.py` | Generic FMU co-simulation loop (`BuildingFMU`, `run_simulation`) |
 | `sil/controllers.py` | Controller interface + baseline PI thermostat — the SIL slot for control strategies under test |
@@ -127,5 +127,9 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 1. ✅ Toolchain + prototype SIL loop
 2. ✅ Parameterizable multi-tenant model: N floors × M apartments, riser network, central plant
 3. ✅ Thermostat realism: sampled control, valve-mounted sensor bias, actuation deadband, battery KPIs
-4. Gymnasium multi-agent interface; experiments: adaptive + distributed control; benchmarking against
+4. ✅ Verified 1980s German MFH (`Building80s`): room-resolved (living/bedroom/kitchen/bath + hall),
+   IWU-typology envelope, 90/70 system, per-stack risers — design-day verified at 56 W/m²
+   ([parameters + results](docs/building80s-parameters.md))
+5. Manual valves (radiator presetting + riser balancing) → tuned/balanced baseline
+6. Gymnasium multi-agent interface; experiments: adaptive + distributed control; benchmarking against
    [BOPTEST](https://ibpsa.github.io/project1-boptest/) `multizone_residential_hydronic` KPIs

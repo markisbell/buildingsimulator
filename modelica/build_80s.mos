@@ -1,0 +1,18 @@
+// Build Building80s as FMI 2.0 co-simulation FMU with embedded CVODE.
+// Floors from env var NFLOORS (default 3).
+// Run inside the buildingsimulator:dev container with workdir /work/build.
+
+loadModel(Modelica); getErrorString();
+loadModel(Buildings); getErrorString();
+loadFile("/work/modelica/BuildingSimulator/package.mo"); getErrorString();
+
+nFlo := getEnvironmentVar("NFLOORS");
+nFlo := if nFlo == "" then "3" else nFlo;
+
+loadString("model Building80sFMU
+  extends BuildingSimulator.Building80s(nFlo=" + nFlo + ");
+end Building80sFMU;"); getErrorString();
+
+setCommandLineOptions("--fmiFlags=s:cvode"); getErrorString();
+buildModelFMU(Building80sFMU, version="2.0", fmuType="cs", fileNamePrefix="Building80s");
+getErrorString();

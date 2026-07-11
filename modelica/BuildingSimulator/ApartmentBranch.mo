@@ -15,8 +15,15 @@ model ApartmentBranch
   replaceable package Medium = Modelica.Media.Interfaces.PartialMedium;
 
   parameter Modelica.Units.SI.Power Q_flow_nominal = 3000
-    "Radiator heat output at 60/40/20";
-  parameter Modelica.Units.SI.MassFlowRate m_flow_nominal = Q_flow_nominal/4186/20
+    "Radiator heat output at rating conditions";
+  parameter Modelica.Units.SI.Temperature TRadSup_nominal = 333.15
+    "Radiator rating: supply temperature (333.15 = 60/40 modern, 363.15 = 90/70 original 80s)";
+  parameter Modelica.Units.SI.Temperature TRadRet_nominal = 313.15
+    "Radiator rating: return temperature";
+  parameter Modelica.Units.SI.Temperature TAirRad_nominal = 293.15
+    "Radiator rating: room temperature (set to the room design temperature)";
+  parameter Modelica.Units.SI.MassFlowRate m_flow_nominal =
+    Q_flow_nominal/4186/(TRadSup_nominal - TRadRet_nominal)
     "Design mass flow";
   // 2R2C zone: fast air node + slow structural mass node
   parameter Modelica.Units.SI.HeatCapacity C_air = 1.5e6
@@ -56,7 +63,9 @@ model ApartmentBranch
     "Pressure drop across the valve (for actuator force models)";
 
   Modelica.Thermal.HeatTransfer.Interfaces.HeatPort_a heaPorZon
-    "Zone node, for coupling to neighbouring apartments";
+    "Mass node, for structural coupling to neighbouring zones";
+  Modelica.Thermal.HeatTransfer.Interfaces.HeatPort_a heaPorAir
+    "Air node, for door/air coupling (e.g. to a hall)";
   Modelica.Thermal.HeatTransfer.Interfaces.HeatPort_a heaPorAmb
     "Ambient node (connect to outdoor temperature source)";
 
@@ -74,10 +83,12 @@ model ApartmentBranch
   Buildings.Fluid.HeatExchangers.Radiators.RadiatorEN442_2 rad(
     redeclare final package Medium = Medium,
     final Q_flow_nominal=Q_flow_nominal,
-    T_a_nominal=333.15,
-    T_b_nominal=313.15,
-    TAir_nominal=293.15,
-    dp_nominal=0) "Radiator (EN 442-2)";
+    final T_a_nominal=TRadSup_nominal,
+    final T_b_nominal=TRadRet_nominal,
+    final TAir_nominal=TAirRad_nominal,
+    T_start=TRadRet_nominal,
+    dp_nominal=0)
+    "Radiator (EN 442-2), warm-started at return temperature";
 
   Buildings.Fluid.Sensors.MassFlowRate senM(redeclare final package Medium = Medium);
 
@@ -116,6 +127,7 @@ equation
   connect(conInt.port_a, capAir.port);
   connect(conInt.port_b, capMass.port);
   connect(capMass.port, heaPorZon);
+  connect(capAir.port, heaPorAir);
   connect(senT.port, capAir.port);
 
   // solar + internal gains, split between air and mass

@@ -36,6 +36,7 @@ class SolarGainModel:
                  frame_shading=0.7,
                  cloudiness=0.4,
                  resolution_s=300):
+        """window_area_m2 may be a scalar or a dict keyed like orientations."""
         self.orientations = orientations
         times = pd.date_range(start=start, periods=days * 86400 // resolution_s,
                               freq=f"{resolution_s}s", tz=TZ)
@@ -50,9 +51,11 @@ class SolarGainModel:
         dhi = clearsky["dhi"] * (1.0 - 0.3 * cloudiness)
         ghi = dni * np.cos(np.radians(solpos["apparent_zenith"])).clip(lower=0) + dhi
 
-        factor = window_area_m2 * g_value * frame_shading
         self._gains = {}
         for i, azimuth in orientations.items():
+            area = (window_area_m2[i] if isinstance(window_area_m2, dict)
+                    else window_area_m2)
+            factor = area * g_value * frame_shading
             poa = pvlib.irradiance.get_total_irradiance(
                 surface_tilt=90.0, surface_azimuth=azimuth,
                 solar_zenith=solpos["apparent_zenith"],
