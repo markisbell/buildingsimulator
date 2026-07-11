@@ -74,7 +74,8 @@ model PrototypeTwoRooms
   Buildings.Fluid.FixedResistances.PressureDrop byp(
     redeclare package Medium = MediumW,
     m_flow_nominal=0.005,
-    dp_nominal=20000)
+    dp_nominal=20000,
+    linearized=true)
     "Differential-pressure bypass (protects pump when all valves close)";
 
   // ---------- Radiator branch 1 ----------
@@ -83,7 +84,10 @@ model PrototypeTwoRooms
     m_flow_nominal=m_flow_nominal_rad,
     dpValve_nominal=10000,
     dpFixed_nominal=2000,
-    l=0.01) "Radiator valve 1 (actuated by external thermostat)";
+    l=0.01,
+    from_dp=true,
+    use_strokeTime=true,
+    strokeTime=120) "Radiator valve 1 (actuated by external thermostat)";
 
   Buildings.Fluid.HeatExchangers.Radiators.RadiatorEN442_2 rad1(
     redeclare package Medium = MediumW,
@@ -101,7 +105,10 @@ model PrototypeTwoRooms
     m_flow_nominal=m_flow_nominal_rad,
     dpValve_nominal=10000,
     dpFixed_nominal=2000,
-    l=0.01) "Radiator valve 2 (actuated by external thermostat)";
+    l=0.01,
+    from_dp=true,
+    use_strokeTime=true,
+    strokeTime=120) "Radiator valve 2 (actuated by external thermostat)";
 
   Buildings.Fluid.HeatExchangers.Radiators.RadiatorEN442_2 rad2(
     redeclare package Medium = MediumW,
