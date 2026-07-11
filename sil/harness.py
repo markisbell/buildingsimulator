@@ -11,7 +11,9 @@ from fmpy.fmi2 import FMU2Slave
 class BuildingFMU:
     """Thin wrapper around an FMI 2.0 co-simulation FMU with named I/O."""
 
-    def __init__(self, fmu_path: str, start_time: float = 0.0):
+    def __init__(self, fmu_path: str, start_time: float = 0.0, parameters=None):
+        """parameters: dict of FMU parameter start values (e.g. balancing
+        presets), applied after instantiation, before initialization."""
         self._md = read_model_description(fmu_path)
         self._vrs = {v.name: v.valueReference for v in self._md.modelVariables}
         self._unzipdir = extract(fmu_path)
@@ -23,6 +25,8 @@ class BuildingFMU:
         )
         self.time = start_time
         self._fmu.instantiate()
+        if parameters:
+            self.set_inputs(parameters)
         self._fmu.setupExperiment(startTime=start_time)
         self._initialized = False
 
@@ -60,7 +64,8 @@ class BuildingFMU:
 
 
 def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
-                   output_names, record_dt=None, on_record=None):
+                   output_names, record_dt=None, on_record=None,
+                   parameters=None):
     """Run a closed-loop SIL simulation.
 
     controllers: dict mapping FMU input name -> controller object with
@@ -71,7 +76,7 @@ def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
                  (e.g. runstore.RunWriter.append for live persistence)
     Returns a list of per-step records (dicts).
     """
-    fmu = BuildingFMU(fmu_path)
+    fmu = BuildingFMU(fmu_path, parameters=parameters)
     exo0 = scenario(0.0)
     act0 = {name: 0.5 for name in controllers}
     fmu.initialize({**exo0, **act0})

@@ -22,6 +22,9 @@ model ApartmentBranch
     "Radiator rating: return temperature";
   parameter Modelica.Units.SI.Temperature TAirRad_nominal = 293.15
     "Radiator rating: room temperature (set to the room design temperature)";
+  parameter Modelica.Units.SI.PressureDifference dpPreset_nominal = 5000
+    "Presetting ring: pressure drop fully open at design flow (sized so
+     balancing lands at mid-opening, keeping the network well-conditioned)";
   parameter Modelica.Units.SI.MassFlowRate m_flow_nominal =
     Q_flow_nominal/4186/(TRadSup_nominal - TRadRet_nominal)
     "Design mass flow";
@@ -53,6 +56,9 @@ model ApartmentBranch
 
   Modelica.Blocks.Interfaces.RealInput yVal(min=0, max=1)
     "Valve position from external thermostat";
+  Modelica.Blocks.Interfaces.RealInput yPreset(min=0, max=1)
+    "Manual presetting ring position (1 = fully open; set once, like a
+     technician's Voreinstellung — FMU input so it is tunable per run)";
   Modelica.Blocks.Interfaces.RealInput QGain(unit="W")
     "Solar + internal heat gains into the zone";
   Modelica.Blocks.Interfaces.RealOutput TRoom(unit="K") "Zone temperature";
@@ -92,6 +98,16 @@ model ApartmentBranch
 
   Buildings.Fluid.Sensors.MassFlowRate senM(redeclare final package Medium = Medium);
 
+  Buildings.Fluid.Actuators.Valves.TwoWayLinear preSet(
+    redeclare final package Medium = Medium,
+    final m_flow_nominal=m_flow_nominal,
+    dpValve_nominal=dpPreset_nominal,
+    l=0.01,
+    linearized=true,
+    use_strokeTime=false)
+    "Manual presetting ring (linear valve, linearized flow law: adequate for
+     a static setting and keeps the 32-valve network solvable)";
+
   Modelica.Thermal.HeatTransfer.Components.HeatCapacitor capAir(
     final C=C_air, T(start=T_start, fixed=true)) "Air node";
   Modelica.Thermal.HeatTransfer.Components.HeatCapacitor capMass(
@@ -113,7 +129,8 @@ model ApartmentBranch
 
 equation
   connect(port_a, val.port_a);
-  connect(val.port_b, rad.port_a);
+  connect(val.port_b, preSet.port_a);
+  connect(preSet.port_b, rad.port_a);
   connect(rad.port_b, senM.port_a);
   connect(senM.port_b, port_b);
 
@@ -139,6 +156,7 @@ equation
   connect(preGainMass.port, capMass.port);
 
   connect(yVal, val.y);
+  connect(yPreset, preSet.y);
   connect(senT.T, TRoom);
   connect(senM.m_flow, m_flow);
 

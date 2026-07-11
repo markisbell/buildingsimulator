@@ -68,6 +68,11 @@ def controllers_ideal():
             for k in range(1, N_ZON + 1)}
 
 
+# manual valves fully open = the authentic unbalanced as-built state
+MANUALS_OPEN = {**{f"yPreset[{k}]": 1.0 for k in range(1, N_ZON + 1)},
+                **{f"yBalance[{s}]": 1.0 for s in range(1, 9)}}
+
+
 ROOM_SHORT = ["living", "bed", "kitchen", "bath"] * 2
 
 
@@ -126,7 +131,8 @@ def scenario_design_day():
     def exogenous(t):
         t_out = C2K - 12.0
         return {"TOut": t_out, "TSupSet": heating_curve_9070(t_out),
-                **{f"QGain[{k}]": 0.0 for k in range(1, N_ZON + 1)}}
+                **{f"QGain[{k}]": 0.0 for k in range(1, N_ZON + 1)},
+                **MANUALS_OPEN}
 
     records = run_simulation(FMU, controllers_ideal(), exogenous,
                              duration=3 * DAY, control_dt=60.0,
@@ -212,7 +218,8 @@ def scenario_typical_day():
         gains = sol.gains(t)
         return {"TOut": t_out, "TSupSet": heating_curve_9070(t_out),
                 **{f"QGain[{k}]": gains[f"QGain[{stack_of(k) + 1}]"]
-                   for k in range(1, N_ZON + 1)}}
+                   for k in range(1, N_ZON + 1)},
+                **MANUALS_OPEN}
 
     records = run_simulation(FMU, controllers_ideal(), exogenous,
                              duration=2 * DAY, control_dt=60.0,

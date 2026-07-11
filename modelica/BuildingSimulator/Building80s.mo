@@ -43,6 +43,14 @@ model Building80s
 
   parameter Modelica.Units.SI.Temperature TOutDes = 261.15
     "Design outdoor temperature (-12 degC)";
+
+  // manual balancing hardware as inputs (set once per run, like a
+  // technician's setting; OpenModelica exports bound parameters as
+  // calculatedParameter, so inputs are the reliable tunable channel)
+  Modelica.Blocks.Interfaces.RealInput yPreset[nZon](each min=0, each max=1)
+    "Radiator presetting rings (Voreinstellung), 1 = fully open";
+  Modelica.Blocks.Interfaces.RealInput yBalance[nSta](each min=0, each max=1)
+    "Riser balancing valves (Strangregulierventile), 1 = fully open";
   parameter Real overSize = 1.15 "Radiator oversizing vs design load";
   final parameter Modelica.Units.SI.Power QRadNom[nFlo, nSta] =
     {{overSize*((GWin[s] + GWal[f, s])*(TSetDes[s] - TOutDes)
@@ -57,7 +65,8 @@ model Building80s
     sum(mSta_nominal);
 
   final parameter Modelica.Units.SI.PressureDifference dpDesign =
-    10000 + 2000 + 3000 + 2*nFlo*300 "Branch + boiler + riser design drop";
+    10000 + 2000 + 5000 + 2000 + 3000 + 2*nFlo*300
+    "TRV + branch + preset ring + riser balancing + boiler + riser drops";
 
   // ---------- SIL interface (flattened: k = (floor-1)*nSta + stack) ----------
   Modelica.Blocks.Interfaces.RealInput yVal[nZon](each min=0, each max=1)
@@ -110,6 +119,15 @@ model Building80s
   Modelica.Thermal.HeatTransfer.Sources.PrescribedTemperature preTOut;
 
   // ---------- hydronics: one riser per stack ----------
+  Buildings.Fluid.Actuators.Valves.TwoWayLinear balRis[nSta](
+    redeclare each package Medium = MediumW,
+    m_flow_nominal=mSta_nominal,
+    each dpValve_nominal=2000,
+    each l=0.01,
+    each linearized=true,
+    each use_strokeTime=false)
+    "Riser balancing valves at the riser bases (yBalance inputs)";
+
   Buildings.Fluid.FixedResistances.PressureDrop pipSup[nFlo, nSta](
     redeclare each package Medium = MediumW,
     m_flow_nominal={{mSta_nominal[s]*(nFlo - f + 1)/nFlo for s in 1:nSta} for f in 1:nFlo},
@@ -155,9 +173,11 @@ equation
   connect(senTRet.port_b, pum.port_a);
   connect(expVes.ports[1], pum.port_a);
 
-  // risers: base connects to plant headers, segments stack per floor
+  // risers: base connects to plant headers via balancing valves
   for s in 1:nSta loop
-    connect(senTSup.port_b, pipSup[1, s].port_a);
+    connect(yBalance[s], balRis[s].y);
+    connect(senTSup.port_b, balRis[s].port_a);
+    connect(balRis[s].port_b, pipSup[1, s].port_a);
     connect(pipRet[1, s].port_b, senTRet.port_a);
     for f in 1:nFlo - 1 loop
       connect(pipSup[f, s].port_b, pipSup[f + 1, s].port_a);
@@ -197,6 +217,7 @@ equation
   for f in 1:nFlo loop
     for s in 1:nSta loop
       connect(yVal[(f - 1)*nSta + s], roo[f, s].yVal);
+      connect(yPreset[(f - 1)*nSta + s], roo[f, s].yPreset);
       connect(QGain[(f - 1)*nSta + s], roo[f, s].QGain);
       connect(roo[f, s].TRoom, TRoom[(f - 1)*nSta + s]);
       connect(roo[f, s].m_flow, mFlow[(f - 1)*nSta + s]);

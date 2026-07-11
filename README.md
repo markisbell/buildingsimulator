@@ -130,6 +130,8 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 4. ✅ Verified 1980s German MFH (`Building80s`): room-resolved (living/bedroom/kitchen/bath + hall),
    IWU-typology envelope, 90/70 system, per-stack risers — design-day verified at 56 W/m²
    ([parameters + results](docs/building80s-parameters.md))
-5. Manual valves (radiator presetting + riser balancing) → tuned/balanced baseline
+5. ✅ Manual valves (presetting rings + riser balancing as FMU inputs) with a damped
+   proportional balancing routine — as-built / open / balanced baseline states
+   ([details](docs/building80s-parameters.md))
 6. Gymnasium multi-agent interface; experiments: adaptive + distributed control; benchmarking against
    [BOPTEST](https://ibpsa.github.io/project1-boptest/) `multizone_residential_hydronic` KPIs

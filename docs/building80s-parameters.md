@@ -99,3 +99,33 @@ model extension and will serve as the tuned baseline for control-strategy compar
 Typical winter day (-5 ± 3 °C, clear-sky solar): rooms hold setpoints, south rooms
 peak +0.1 K under ~2 kW window gains (ideal PI rejects fully), boiler modulates
 6.1-18.5 kW — `results/typical_day_80s.png`.
+
+## 7. Manual valves and hydraulic balancing
+
+Presetting rings (5 kPa at design flow, per radiator branch) and riser balancing
+valves (2 kPa, per riser base) are modeled as linear valves with **FMU inputs**
+`yPreset[k]` / `yBalance[s]` — set once per run like a technician's setting, tunable
+without recompiling (OpenModelica exports bound parameters as non-settable
+`calculatedParameter`, so inputs are the reliable channel). `sil/run_balancing.py`
+implements the measurement-based proportional method with damped iteration
+(y ∝ (m_demand/m)^0.4; undamped updates oscillate because the branches couple through
+the pump operating point).
+
+**Balancing target and results:** rings are set to the *demand* flow (design load over
+the 20 K spread = radiator flow / 1.15). Verified (all PASS):
+
+- Commissioning state (TRVs open): flows within **3.4 %** of demand, return **69.7 °C**
+  — the textbook 90/70 picture.
+- Steady operation unchanged: 56.1 W/m², rooms at setpoint ±0.0 K — and return stays
+  ~64 °C, because under exact-setpoint (integral) control return = supply − Q/(ṁ·cp)
+  is **invariant to balancing**; the textbook 70 °C operating return implicitly assumes
+  P-control offsets or non-oversized radiators.
+- Operating benefit = fair flow distribution when all TRVs demand maximum: with
+  realistic as-built ring scatter (49 % flow deviation), morning-recovery deficit
+  spread across rooms is 2.11 K; after balancing 1.64 K
+  (`results/balancing_80s.png`). The self-consistently sized network itself is
+  near-balanced (4.5 % all-open) — real imbalance enters through the as-built ring
+  positions, which the seeded scatter represents.
+
+Baseline states for control experiments: **as-built** (scattered rings), **open rings**
+(idealized-unbalanced), **balanced** (`results/presets_80s.json`).

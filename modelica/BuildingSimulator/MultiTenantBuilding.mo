@@ -81,6 +81,8 @@ model MultiTenantBuilding
      otherwise accumulate pump heat unboundedly (no pipe losses modeled)";
 
   Modelica.Blocks.Sources.Constant conPumY(k=1) "Pump at full speed";
+  Modelica.Blocks.Sources.Constant conPreOpen[nApt](each k=1)
+    "Presetting rings fully open (generic building is not balanced)";
 
   Buildings.Fluid.HeatExchangers.Heater_T boi(
     redeclare package Medium = MediumW,
@@ -152,6 +154,7 @@ equation
   connect(TOut, preTOut.T);
   for i in 1:nApt loop
     connect(yVal[i], apt[i].yVal);
+    connect(conPreOpen[i].y, apt[i].yPreset);
     connect(QGain[i], apt[i].QGain);
     connect(apt[i].TRoom, TRoom[i]);
     connect(apt[i].m_flow, mFlow[i]);
