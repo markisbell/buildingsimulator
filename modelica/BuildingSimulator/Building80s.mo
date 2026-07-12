@@ -96,7 +96,7 @@ model Building80s
     TAirRad_nominal={{TSetDes[s] for s in 1:nSta} for f in 1:nFlo},
     G_win={{GWin[s] for s in 1:nSta} for f in 1:nFlo},
     G_wall=GWal,
-    G_int={{9.0*ARoo[s] for s in 1:nSta} for f in 1:nFlo},
+    G_int={{15.5*ARoo[s] for s in 1:nSta} for f in 1:nFlo},
     C_air={{15e3*ARoo[s] for s in 1:nSta} for f in 1:nFlo},
     C_mass={{260e3*ARoo[s] for s in 1:nSta} for f in 1:nFlo},
     each fraGainAir=0.3) "Rooms";

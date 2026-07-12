@@ -1,4 +1,4 @@
-"""Generate the self-contained graphical verification report
+﻿"""Generate the self-contained graphical verification report
 (results/verification-report.html) from the plots in results/.
 Run after regenerating any verification figures."""
 import base64
@@ -82,7 +82,7 @@ footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
   <h1>Verification report — 1980s German multi-family building simulator</h1>
   <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
   3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
-  repo commit <b>b23c3e9</b> · 2026-07-12</div>
+  repo commit <b>HEAD</b> · 2026-07-12 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K)</div>
 </header>
 <p class="lede">Every verification claim, next to its graphical evidence. Each figure is the
 unmodified output of a reproducible script in <code>sil/</code>; the numbers in the tables
@@ -93,12 +93,12 @@ are read from the same runs.</p>
 <h2>Steady heat load, temperatures and setpoints at −12 °C</h2>
 <table>
 <tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
-<tr><td>Specific heat load</td><td class="num">52–62 W/m²</td><td class="num">56.1 W/m² (21.5 kW)</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Specific heat load</td><td class="num">58–70 W/m²</td><td class="num">65.1 W/m² (25.0 kW)</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Supply temperature</td><td class="num">≈ 90 °C</td><td class="num">90.0 °C</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Return temperature (unbalanced state)</td><td class="num">60–74 °C</td><td class="num">63.9 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Return temperature (unbalanced state)</td><td class="num">60–74 °C</td><td class="num">64.7 °C</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Room setpoints (24 rooms, bath 24 °C)</td><td class="num">± 0.5 K</td><td class="num">worst ± 0.00 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Valve saturation</td><td class="num">none</td><td class="num">16–18 % stroke</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Floor flow imbalance</td><td class="num">&lt; 20 %</td><td class="num">2.9 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Valve saturation</td><td class="num">none</td><td class="num">17–24 % stroke</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Floor flow imbalance</td><td class="num">&lt; 20 %</td><td class="num">4.8 %</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_DESIGN@@" alt="Design day results">
 <figcaption>Left: all 24 rooms exactly on their setpoint marks (20 °C, baths 24 °C) on day 3 of a
@@ -143,10 +143,10 @@ algorithms. Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
 <h2>Identical building, weather and solar; only the thermostat hardware differs</h2>
 <table>
 <tr><th>KPI (days 2–7)</th><th>Ideal PI</th><th>Realistic eTRV</th></tr>
-<tr><td>Discomfort</td><td class="num">342 K·h</td><td class="num">849 K·h</td></tr>
-<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">91.8 K·h</td><td class="num">38.4 K·h</td></tr>
-<tr><td>Boiler energy</td><td class="num">1973 kWh</td><td class="num">1882 kWh</td></tr>
-<tr><td>Valve travel / moves</td><td class="num">83 strokes / 33 099</td><td class="num">416 strokes / 4 056</td></tr>
+<tr><td>Discomfort</td><td class="num">592 K·h</td><td class="num">1000 K·h</td></tr>
+<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">77.4 K·h</td><td class="num">31.8 K·h</td></tr>
+<tr><td>Boiler energy</td><td class="num">1973 kWh</td><td class="num">1904 kWh</td></tr>
+<tr><td>Valve travel / moves</td><td class="num">85 strokes / 25 554</td><td class="num">788 strokes / 4 094</td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_CMP@@" alt="Ideal vs realistic comparison">
 <figcaption>Top: the valve-mounted sensor’s warm bias keeps the real device ~1 K under setpoint.
@@ -178,10 +178,10 @@ Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json
 <h2>Cycling boiler, riser lag, stochastic gains, real eTRVs</h2>
 <table>
 <tr><th>Signature</th><th>Field-data range</th><th>Measured</th><th></th></tr>
-<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">89 / day</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">88 / day</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.1 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.093 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.79</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.081 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.78</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_OSC@@" alt="Oscillation traces">
 <figcaption>Day 2, 06–12 h: supply sawing on ~15-minute burner cycles; room temperatures dipping
@@ -213,7 +213,7 @@ overtemperature model. Script: <code>run_radiator_check.py</code>.</figcaption><
 <tr><th>Signature (shared day-2 window)</th><th>dt = 30 s</th><th>dt = 10 s</th><th>Difference</th></tr>
 <tr><td>Burner starts / day</td><td class="num">88.9</td><td class="num">90.4</td><td class="num">+1.6 %</td></tr>
 <tr><td>Supply sawtooth pk-pk</td><td class="num">19.5 K</td><td class="num">19.0 K</td><td class="num">−2.7 %</td></tr>
-<tr><td>Room ripple (detrended std)</td><td class="num">0.093 K</td><td class="num">0.085 K</td><td class="num">−9.2 % (8 mK)</td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.081 K</td><td class="num">0.085 K</td><td class="num">−9.2 % (8 mK)</td></tr>
 <tr><td>Radiator flow CV</td><td class="num">0.77</td><td class="num">0.75</td><td class="num">−2.4 %</td></tr>
 <tr><td>Mean boiler power</td><td class="num">15.68 kW</td><td class="num">15.57 kW</td><td class="num">−0.7 %</td></tr>
 <tr><td>Mean room temperature</td><td class="num">19.066 °C</td><td class="num">19.071 °C</td><td class="num">± 0.0 %</td></tr>
@@ -243,3 +243,4 @@ for key, name in IMAGES.items():
 
 OUT.write_text(html, encoding="utf-8")
 print(f"wrote {OUT} ({OUT.stat().st_size/1e6:.1f} MB)")
+

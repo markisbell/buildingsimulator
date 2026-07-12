@@ -37,8 +37,9 @@ model ApartmentBranch
     "Air node to outdoor: windows + infiltration (fast losses)";
   parameter Modelica.Units.SI.ThermalConductance G_wall = 90
     "Mass node to outdoor: opaque envelope";
-  parameter Modelica.Units.SI.ThermalConductance G_int = 600
-    "Air to internal surfaces (convective/radiative exchange)";
+  parameter Modelica.Units.SI.ThermalConductance G_int = 990
+    "Air to internal surfaces: ISO 13790 convention h_is*A_t =
+     3.45 W/(m2K) x 4.5 x A_floor = 15.5 W/(m2K) x A_floor (64 m2 default)";
   parameter Real fraGainAir = 0.3
     "Fraction of QGain hitting the air node (rest absorbed by mass)";
   parameter Modelica.Units.SI.Temperature T_start = 293.15

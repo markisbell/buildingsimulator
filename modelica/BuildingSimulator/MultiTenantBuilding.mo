@@ -74,11 +74,12 @@ model MultiTenantBuilding
   Buildings.Fluid.Movers.SpeedControlled_y pum(
     redeclare package Medium = MediumW,
     addPowerToMedium=false,
+    energyDynamics=Modelica.Fluid.Types.Dynamics.SteadyState,
     per(pressure(V_flow={0, 0.5, 1.0, 1.5}*(m_flow_nominal_tot/1000),
                  dp={1.5, 1.3, 1.0, 0.4}*dpDesign)))
-    "Constant-speed circulation pump. Dissipation not added to the fluid:
-     with tight-sealing TRVs the closed night loop is adiabatic and would
-     otherwise accumulate pump heat unboundedly (no pipe losses modeled)";
+    "Constant-speed circulation pump. Dissipation not added to the fluid
+     (adiabatic night loop) and steady-state volume (solver robustness,
+     matching Building80s)";
 
   Modelica.Blocks.Sources.Constant conPumY(k=1) "Pump at full speed";
   Modelica.Blocks.Sources.Constant conPreOpen[nApt](each k=1)

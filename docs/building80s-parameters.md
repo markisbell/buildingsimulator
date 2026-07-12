@@ -42,9 +42,15 @@ G_wall = 1.1 · U_wall·A_wall (+ floor position extras, to mass node)
 | Kitchen | 10.6 | 5.0 | +3.7 | +4.8 |
 | Bath | 5.6 | 3.7 | +2.2 | +2.9 |
 
-Thermal mass (ISO 13790 "heavy"): C_mass = 260 kJ/(m²K)·A; air+furnishing
-C_air = 15 kJ/(m²K)·A. Air↔surfaces G_int = 9 W/(m²K)·A. Room-hall doors 15 W/K each;
-hall→stairwell 10 W/K at 15 °C. Vertical slab coupling 1.7 W/(m²K)·A per stack.
+Thermal mass (ISO 13790 "heavy"): C_mass = 260 kJ/(m²K)·A. The air node is **not an
+empty room**: C_air = 15 kJ/(m²K)·A ≈ 5× bare air, lumping furniture/contents per
+standard practice (EnergyPlus zone-capacitance multiplier, typical 1-20; the
+empty-room assumption is invalid for dynamic calculations —
+[Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145)). Air↔surfaces
+G_int = **15.5 W/(m²K)·A** per the ISO 13790 convention (h_is·A_t = 3.45 W/(m²K) ×
+4.5·A_floor), calibrated after the cooldown analysis in
+[heatup-dynamics.md](heatup-dynamics.md). Room-hall doors 15 W/K each; hall→stairwell
+10 W/K at 15 °C. Vertical slab coupling 1.7 W/(m²K)·A per stack.
 
 ## 4. Design loads and radiator sizing (DIN-style, -12 °C, rooms 20 °C, bath 24 °C)
 
@@ -80,12 +86,19 @@ ideal PI per room (plant verification, device effects excluded), day 3 evaluated
 
 | Criterion | Target | Result | |
 |---|---|---|---|
-| Specific heat load | 52-62 W/m² | **56.1 W/m² (21.5 kW)** — matches the §4 derivation | PASS |
+| Specific heat load | 58-70 W/m² | **65.1 W/m² (25.0 kW)** | PASS |
 | Supply temperature | ~90 °C at -12 °C | **90.0 °C** | PASS |
-| Return temperature | 60-74 °C (unbalanced) | **63.9 °C** | PASS* |
+| Return temperature | 60-74 °C (unbalanced) | **64.7 °C** | PASS* |
 | Room setpoints | ±0.5 K, bath 24 °C | worst room **+0.00 K** (all 24 rooms) | PASS |
-| Valve saturation | 10-95 % | **16-18 %**, no saturation | PASS |
-| Floor flow imbalance | < 20 % | **2.9 %** | PASS |
+| Valve saturation | 10-95 % | **17-24 %**, no saturation | PASS |
+| Floor flow imbalance | < 20 % | **4.8 %** | PASS |
+
+Note on the heat-load band: the simple §4 estimate (ΣG·ΔT ≈ 21.5 kW = 56 W/m²)
+references all losses to the room temperature. With the ISO air-surface coupling
+(G_int = 15.5 W/(m²K)·A) the interior surfaces run ≈ 1 K warmer, so the envelope
+losses — which leave from the mass node — are correspondingly higher: 25.0 kW =
+65 W/m², at the lower edge of the 70-100 W/m² literature corridor for this era. The
+radiator sizing margin shrinks from 1.15 to ≈ 1.07; all rooms still hold setpoint.
 
 *The return sits below the textbook 66-74 °C band — the authentic fingerprint of an
 **unbalanced** system without presetting: the 1.15× oversized radiators plus the

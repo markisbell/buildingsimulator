@@ -91,6 +91,34 @@ causes, so optimal-start and coordination strategies developed against it face t
 prediction problem as in the field — including its exploitable structure (clear-sky
 forecasts predict phase-3 solar; valve-position feedback predicts plant de-saturation).
 
+## 5. The mirror image: evening cooldown
+
+The cooldown after setback shows the same two-node structure in reverse
+(`sil/run_cooldown_analysis.py`):
+
+![Evening cooldown: ideal PI vs realistic eTRV](figures/cooldown_analysis.png)
+
+*Fig. 3 — Room temperature and radiator power after the 22:00 setback. The ideal PI
+free-cools for ≈ 2.5 h before re-engaging at the night setpoint; the realistic eTRV
+glides ≈ 1 K lower (sensor bias) with relay-style night cycling.*
+
+| Window after setback | Rate | Mechanism |
+|---|---|---|
+| first hour | ≈ −2.2 K/h | **air-node fast phase**: with the valve shut, the air (small $C_{air}$) relaxes with $\tau \approx 25\,$min toward the still-warm mass; predicted sag ≈ $\frac{G_{win}}{G_{win}+G_{int}}(T_{mass}-T_{out}) \approx 1$ K below the mass node |
+| hours 2-3 | ≈ −0.3 K/h | transition: air slaved to the slowly cooling structure |
+| rest of night | ≈ −0.14 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power; pure structural cooling would be ≈ −0.5 K/h initially |
+
+The apparent "fast cooldown" is therefore the *air separating from the structure*, not
+the building losing its stored heat — the masonry cools an order of magnitude slower.
+Two model notes: (i) the rooms are **not empty** — $C_{air}$ = 15 kJ/(m²K) ≈ 5× bare
+air lumps furniture/contents, mid-range of EnergyPlus zone-capacitance-multiplier
+practice (1-20) and consistent with the finding that empty-room assumptions distort
+dynamic simulations ([Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145));
+(ii) the air↔surface coupling follows the ISO 13790 convention
+$h_{is}·A_t = 3.45\,\mathrm{W/(m^2K)} \times 4.5·A_{floor}$, adopted after this
+analysis (it deepens surface coupling, shortens the fast phase, and raises the steady
+heat load to 65 W/m² — see building80s-parameters.md §6).
+
 ## References
 
 - P.R. Armstrong, C.E. Hancock, J.E. Seem: *Commercial Building Temperature Recovery —
