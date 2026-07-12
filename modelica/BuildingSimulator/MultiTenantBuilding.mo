@@ -11,8 +11,11 @@ model MultiTenantBuilding
   parameter Integer nApeFlo = 2 "Apartments per floor";
   final parameter Integer nApt = nFlo*nApeFlo "Total apartments";
 
-  parameter Modelica.Units.SI.Power QRad_nominal = 4500
-    "Radiator size per apartment at 60/40/20 (UA_apt*30 K design load + margin)";
+  parameter Modelica.Units.SI.Power QRad_nominal = 5100
+    "Radiator size per apartment at 60/40/20: 1.3 x the naive UA_apt*30 K
+     design load (3.9 kW) — generous era sizing; with the ISO 13790
+     interior coupling the effective load is ~16 % above the naive value,
+     leaving ~1.12 effective margin for setback recovery";
   final parameter Modelica.Units.SI.MassFlowRate m_flow_nominal_rad =
     QRad_nominal/4186/20 "Design flow per apartment";
   final parameter Modelica.Units.SI.MassFlowRate m_flow_nominal_tot =

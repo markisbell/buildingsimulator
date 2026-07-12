@@ -6,7 +6,7 @@ model Building80s
    bath N) + an unheated hall per apartment. Envelope from IWU typology
    U-values (wall 0.80, window 2.57, roof 0.44, cellar ceiling 0.67 with
    b = 0.5), +10 % thermal bridges, n = 0.7 1/h infiltration. Radiators
-   rated 90/70/20 and sized 1.15 x room design load at -12 degC. Two-pipe
+   rated 90/70/20 and sized 1.3 x room design load at -12 degC. Two-pipe
    distribution with one riser per room stack (8 risers).
    See docs/building80s-parameters.md for the derivation.
 
@@ -51,7 +51,12 @@ model Building80s
     "Radiator presetting rings (Voreinstellung), 1 = fully open";
   Modelica.Blocks.Interfaces.RealInput yBalance[nSta](each min=0, each max=1)
     "Riser balancing valves (Strangregulierventile), 1 = fully open";
-  parameter Real overSize = 1.15 "Radiator oversizing vs design load";
+  parameter Real overSize = 1.3
+    "Radiator oversizing vs the naive design load (G*dT referenced to the
+     room temperature). Era practice was generous sizing; with the ISO
+     13790 interior coupling the effective load runs ~16 % above the naive
+     value, so 1.3 leaves ~1.12 effective margin for setback recovery
+     (DIN EN 12831 f_RH reheat philosophy)";
   final parameter Modelica.Units.SI.Power QRadNom[nFlo, nSta] =
     {{overSize*((GWin[s] + GWal[f, s])*(TSetDes[s] - TOutDes)
                 + 15*(TSetDes[s] - 292.15))

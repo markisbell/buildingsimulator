@@ -52,9 +52,9 @@ across the throttling range.*
 
 | Comparison | Range | Max deviation |
 |---|---|---|
-| FMU vs exact integral | 145 % → ~50 % of design flow | **0.6–1.8 %** |
+| FMU vs exact integral | full → ~37 % of design flow | **0.3–1.8 %** |
 | LMTD vs exact integral | entire staircase | **≤ 0.8 %** |
-| FMU at ~20 % of design flow | trickle | +10.7 % — rig artifact* |
+| FMU at ~15 % of design flow | trickle | +7.9 % — rig artifact* |
 
 The systematic +1–2 % of the FMU stems from the two-node zone: the radiant fraction
 sees the (slightly warmer) mass node, while the analytical rig uses the measured air

@@ -49,7 +49,7 @@ G_GND = [8.8, 5.9, 3.7, 2.2] * 2
 G_TOP = [11.6, 7.7, 4.8, 2.9] * 2
 T_SET = [20.0, 20.0, 20.0, 24.0] * 2
 T_OUT_DES = -12.0
-OVERSIZE = 1.15
+OVERSIZE = 1.3  # keep in sync with overSize in Building80s.mo
 
 md = read_model_description(FMU)
 N_ZON = len([v for v in md.modelVariables if re.fullmatch(r"TRoom\[\d+\]", v.name)])
@@ -200,7 +200,9 @@ def verify_balanced(presets):
     # balance(). The operating benefit of balancing is fair flow
     # distribution when all valves demand maximum -> recovery test below.
     ok = True
-    ok &= check("specific heat load 52-62 W/m2", 52 <= q_m2 <= 62, f"{q_m2:.1f}")
+    # band per docs/building80s-parameters.md section 6 (ISO interior
+    # coupling raises envelope losses above the naive room-referenced value)
+    ok &= check("specific heat load 58-70 W/m2", 58 <= q_m2 <= 70, f"{q_m2:.1f}")
     ok &= check("rooms at setpoint +/-0.5 K", abs(dev[worst]) <= 0.5,
                 f"worst {dev[worst]:+.2f} K")
     return ok, d, v_mean

@@ -49,7 +49,7 @@ dynamics (constant $G_{door}$ = 15 W/K).
 
 - **Element-wise EN 442 law** $\dot Q_i \propto |\Delta T_i|^{1.24}$ over 5 elements —
   the emission *characteristic* is fully nonlinear and log-mean-consistent (validated to
-  0.6–1.8 % against the exact integral, see radiator-modeling.md §3).
+  0.3–1.8 % against the exact integral, see radiator-modeling.md §3).
 - **Steady-state energy balance**: the water/steel storage
   ($\approx$ 6 kg water per kW rating, τ of order 5–15 min at design flow) carries **no
   state**. The radiator output follows its boundary conditions instantly.

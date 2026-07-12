@@ -83,7 +83,8 @@ footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
   <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
   3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
   repo commit <b>HEAD</b> · 2026-07-12 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
-  furnished-room fast node (C<sub>air</sub> = 40 kJ/m²K, τ<sub>fast</sub> ≈ 41 min)</div>
+  furnished-room fast node (C<sub>air</sub> = 40 kJ/m²K, τ<sub>fast</sub> ≈ 41 min) ·
+  radiators 1.3× design load (era sizing)</div>
 </header>
 <p class="lede">Every verification claim, next to its graphical evidence. Each figure is the
 unmodified output of a reproducible script in <code>sil/</code>; the numbers in the tables
@@ -94,17 +95,17 @@ are read from the same runs.</p>
 <h2>Steady heat load, temperatures and setpoints at −12 °C</h2>
 <table>
 <tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
-<tr><td>Specific heat load</td><td class="num">58–70 W/m²</td><td class="num">65.1 W/m² (25.0 kW)</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Specific heat load</td><td class="num">58–70 W/m²</td><td class="num">65.0 W/m² (25.0 kW)</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Supply temperature</td><td class="num">≈ 90 °C</td><td class="num">90.0 °C</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Return temperature (unbalanced state)</td><td class="num">60–74 °C</td><td class="num">64.7 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Return temperature (unbalanced state)</td><td class="num">60–74 °C</td><td class="num">61.0 °C</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Room setpoints (24 rooms, bath 24 °C)</td><td class="num">± 0.5 K</td><td class="num">worst ± 0.00 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Valve saturation</td><td class="num">none</td><td class="num">17–24 % stroke</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Floor flow imbalance</td><td class="num">&lt; 20 %</td><td class="num">4.8 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Valve saturation</td><td class="num">none</td><td class="num">14–16 % stroke</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Floor flow imbalance</td><td class="num">&lt; 20 %</td><td class="num">7.1 %</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_DESIGN@@" alt="Design day results">
 <figcaption>Left: all 24 rooms exactly on their setpoint marks (20 °C, baths 24 °C) on day 3 of a
 constant −12 °C design day. Right: TRV working points — uniformly deep-throttled, the authentic
-signature of an unbalanced 90/70 system with 1.15× oversized radiators.
+signature of an unbalanced 90/70 system with 1.3× oversized radiators.
 Script: <code>run_design_day.py</code>.</figcaption></figure>
 </section>
 
@@ -144,10 +145,10 @@ algorithms. Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
 <h2>Identical building, weather and solar; only the thermostat hardware differs</h2>
 <table>
 <tr><th>KPI (days 2–7)</th><th>Ideal PI</th><th>Realistic eTRV</th></tr>
-<tr><td>Discomfort</td><td class="num">659 K·h</td><td class="num">1069 K·h</td></tr>
-<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">93.1 K·h</td><td class="num">43.0 K·h</td></tr>
-<tr><td>Boiler energy</td><td class="num">1965 kWh</td><td class="num">1897 kWh</td></tr>
-<tr><td>Valve travel / moves</td><td class="num">83 strokes / 23 070</td><td class="num">637 strokes / 3 574</td></tr>
+<tr><td>Discomfort</td><td class="num">418 K·h</td><td class="num">908 K·h</td></tr>
+<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">131 K·h</td><td class="num">46.1 K·h</td></tr>
+<tr><td>Boiler energy</td><td class="num">2018 kWh</td><td class="num">1922 kWh</td></tr>
+<tr><td>Valve travel / moves</td><td class="num">77 strokes / 29 033</td><td class="num">735 strokes / 4 526</td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_CMP@@" alt="Ideal vs realistic comparison">
 <figcaption>Top: the valve-mounted sensor’s warm bias keeps the real device ~1 K under setpoint.
@@ -161,16 +162,16 @@ Bottom: sensor reading vs true room temperature. Script: <code>run_thermostat_co
 <table>
 <tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
 <tr><td>Commissioning flows (TRVs open)</td><td class="num">± 5 % of demand</td><td class="num">worst 3.4 %</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Commissioning return</td><td class="num">≈ 70 °C</td><td class="num">69.7 °C</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">2.11 K → 1.64 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Commissioning return</td><td class="num">≈ 70 °C</td><td class="num">66.6 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">1.41 K → 1.07 K</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <div class="finding"><em>Documented physics:</em> under exact-setpoint integral control the
-operating return equals supply − Q/(ṁ·c<sub>p</sub>) and is invariant to balancing — with 1.15×
-oversized radiators it stays ≈ 64 °C. The textbook 70 °C return exists in the commissioning
+operating return equals supply − Q/(ṁ·c<sub>p</sub>) and is invariant to balancing — with 1.3×
+oversized radiators it stays ≈ 61 °C. The textbook 70 °C return exists in the commissioning
 state; the operating benefit of balancing is fair flow distribution during recovery.</div>
 <figure><img src="data:image/png;base64,@@IMG_BAL@@" alt="Balancing results">
 <figcaption>Morning recovery after night setback: per-room temperature deficits at boost + 3 h,
-as-built ring scatter (49 % flow deviation) vs the balanced state.
+as-built ring scatter (43 % flow deviation) vs the balanced state.
 Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json</code>.</figcaption></figure>
 </section>
 
@@ -179,10 +180,10 @@ Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json
 <h2>Cycling boiler, riser lag, stochastic gains, real eTRVs</h2>
 <table>
 <tr><th>Signature</th><th>Field-data range</th><th>Measured</th><th></th></tr>
-<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">84 / day</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">18.9 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.029 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.70</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">83 / day</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.2 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.038 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.80</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_OSC@@" alt="Oscillation traces">
 <figcaption>Day 2, 06–12 h: supply sawing on ~15-minute burner cycles; room temperatures dipping
@@ -195,9 +196,9 @@ chatter; burner duty blocks. Script: <code>run_oscillation_check.py</code>.</fig
 <h2>FMU steady states vs the logarithmic overtemperature model</h2>
 <table>
 <tr><th>Comparison</th><th>Range</th><th>Max deviation</th><th></th></tr>
-<tr><td>FMU vs exact EN 442 integral (N = 400)</td><td class="num">145 % → ~50 % of design flow</td><td class="num">0.6–1.8 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>FMU vs exact EN 442 integral (N = 400)</td><td class="num">full → ~37 % of design flow</td><td class="num">0.3–1.8 %</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>LMTD formula vs exact integral</td><td class="num">entire staircase</td><td class="num">≤ 0.8 %</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>FMU at ~20 % of design flow</td><td class="num">trickle</td><td class="num">+10.7 % — rig artifact (multi-hour residence time, room drifting)</td><td></td></tr>
+<tr><td>FMU at ~15 % of design flow</td><td class="num">trickle</td><td class="num">+7.9 % — rig artifact (multi-hour residence time, room drifting)</td><td></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_RAD@@" alt="Radiator operating points">
 <figcaption>Left: measured FMU operating points on the analytical curves — exact continuous
