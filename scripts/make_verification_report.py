@@ -1,0 +1,245 @@
+"""Generate the self-contained graphical verification report
+(results/verification-report.html) from the plots in results/.
+Run after regenerating any verification figures."""
+import base64
+from pathlib import Path
+
+RESULTS = Path(__file__).resolve().parents[1] / "results"
+OUT = RESULTS / "verification-report.html"
+
+IMAGES = {
+    "IMG_DESIGN": "design_day_80s.png",
+    "IMG_SWEEP": "valve_sweep.png",
+    "IMG_ADAPT": "adaptation_run.png",
+    "IMG_CMP": "cmp_ideal_vs_realistic.png",
+    "IMG_BAL": "balancing_80s.png",
+    "IMG_OSC": "oscillation_check_80s.png",
+    "IMG_RAD": "radiator_check_80s.png",
+    "IMG_DT": "dt_comparison_80s.png",
+}
+
+TEMPLATE = """
+<title>Building80s verification report</title>
+<style>
+:root {
+  --paper: #FAFAF7; --card: #FFFFFF; --ink: #1F2125; --muted: #6E6A63;
+  --line: #E3E0D8; --supply: #B8432F; --return: #2E5E8C; --pass: #2F7D46;
+  --pass-bg: #EAF4EC; --code: #F1EFE9;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #17191C; --card: #1F2226; --ink: #E8E6E1; --muted: #9B968D;
+          --line: #33363B; --supply: #E06A52; --return: #6FA3D3; --pass: #6FBF88;
+          --pass-bg: #22352A; --code: #23262B; }
+}
+:root[data-theme="dark"] { --paper: #17191C; --card: #1F2226; --ink: #E8E6E1;
+  --muted: #9B968D; --line: #33363B; --supply: #E06A52; --return: #6FA3D3;
+  --pass: #6FBF88; --pass-bg: #22352A; --code: #23262B; }
+:root[data-theme="light"] { --paper: #FAFAF7; --card: #FFFFFF; --ink: #1F2125;
+  --muted: #6E6A63; --line: #E3E0D8; --supply: #B8432F; --return: #2E5E8C;
+  --pass: #2F7D46; --pass-bg: #EAF4EC; --code: #F1EFE9; }
+
+body { background: var(--paper); color: var(--ink);
+  font: 16px/1.65 system-ui, "Segoe UI", sans-serif; margin: 0; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 48px 24px 80px; }
+header { border-bottom: 3px solid var(--supply); padding-bottom: 20px;
+  margin-bottom: 12px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em;
+  text-wrap: balance; }
+.meta { color: var(--muted); font-size: 13.5px;
+  font-family: Consolas, monospace; }
+.meta b { color: var(--ink); font-weight: 600; }
+.lede { font-size: 17px; max-width: 64ch; }
+section { margin-top: 44px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--supply); font-weight: 600; margin-bottom: 4px; }
+h2 { font-size: 21px; margin: 0 0 10px; letter-spacing: -0.005em; }
+p { max-width: 68ch; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 14px 0; }
+th { text-align: left; font-size: 12px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted); font-weight: 600;
+  padding: 6px 10px; border-bottom: 2px solid var(--line); }
+td { padding: 7px 10px; border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums; }
+td.num { font-family: Consolas, monospace; font-size: 13.5px; }
+.pass { display: inline-block; background: var(--pass-bg); color: var(--pass);
+  font-weight: 600; font-size: 12px; padding: 1px 10px; border-radius: 10px; }
+figure { margin: 18px 0 0; background: #FFFFFF; border: 1px solid var(--line);
+  border-radius: 8px; padding: 14px; overflow-x: auto; }
+figure img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+figcaption { font-size: 13.5px; color: var(--muted); padding: 10px 4px 0;
+  max-width: 78ch; }
+code { background: var(--code); border-radius: 4px; padding: 1px 6px;
+  font-family: Consolas, monospace; font-size: 13px; }
+.finding { border-left: 3px solid var(--return); padding: 2px 0 2px 14px;
+  color: var(--ink); max-width: 66ch; margin: 14px 0; }
+.finding em { color: var(--return); font-style: normal; font-weight: 600; }
+footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
+  color: var(--muted); font-size: 13px; }
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Verification report — 1980s German multi-family building simulator</h1>
+  <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
+  3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
+  repo commit <b>b23c3e9</b> · 2026-07-12</div>
+</header>
+<p class="lede">Every verification claim, next to its graphical evidence. Each figure is the
+unmodified output of a reproducible script in <code>sil/</code>; the numbers in the tables
+are read from the same runs.</p>
+
+<section>
+<div class="eyebrow">1 · Plant &amp; envelope — winter design day</div>
+<h2>Steady heat load, temperatures and setpoints at −12 °C</h2>
+<table>
+<tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
+<tr><td>Specific heat load</td><td class="num">52–62 W/m²</td><td class="num">56.1 W/m² (21.5 kW)</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Supply temperature</td><td class="num">≈ 90 °C</td><td class="num">90.0 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Return temperature (unbalanced state)</td><td class="num">60–74 °C</td><td class="num">63.9 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Room setpoints (24 rooms, bath 24 °C)</td><td class="num">± 0.5 K</td><td class="num">worst ± 0.00 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Valve saturation</td><td class="num">none</td><td class="num">16–18 % stroke</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Floor flow imbalance</td><td class="num">&lt; 20 %</td><td class="num">2.9 %</td><td><span class="pass">PASS</span></td></tr>
+</table>
+<figure><img src="data:image/png;base64,@@IMG_DESIGN@@" alt="Design day results">
+<figcaption>Left: all 24 rooms exactly on their setpoint marks (20 °C, baths 24 °C) on day 3 of a
+constant −12 °C design day. Right: TRV working points — uniformly deep-throttled, the authentic
+signature of an unbalanced 90/70 system with 1.15× oversized radiators.
+Script: <code>run_design_day.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">2 · TRV insert — flow characteristic</div>
+<h2>German M30×1.5 insert, 1.5 mm stroke, anchored to Danfoss RA-N data</h2>
+<table>
+<tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
+<tr><td>Sealing dead zone (≤ 6 % stroke)</td><td class="num">≈ 0 flow</td><td class="num">0.01 % of max</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Flow at 30 % stroke (kv(2K)/kvs = 0.73/0.90)</td><td class="num">≈ 81 %</td><td class="num">81.0 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Mechanical hysteresis (0.1 mm play)</td><td class="num">0.10 mm</td><td class="num">0.10 mm</td><td><span class="pass">PASS</span></td></tr>
+</table>
+<figure><img src="data:image/png;base64,@@IMG_SWEEP@@" alt="Valve sweep">
+<figcaption>Left: realized flow vs commanded stroke through the FMU (opening and closing
+coincide — the hydraulics carry no hysteresis) against the pure Kv table; the gap is valve
+authority. The dotted line marks the RA-N anchor: 81 % flow at the x<sub>p</sub> = 2 K lift.
+Right: the device-side 0.1 mm motor–pin play. Script: <code>run_valve_sweep.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">3 · eTRV device — motor current &amp; adaptation</div>
+<h2>Seal detection from the current signature</h2>
+<table>
+<tr><th>Quantity</th><th>True value</th><th>Firmware estimate</th><th></th></tr>
+<tr><td>Mechanical zero (population n = 60)</td><td class="num">—</td><td class="num">−78 µm bias, 4 µm spread</td><td><span class="pass">systematic → compensable</span></td></tr>
+<tr><td>Seal zone thickness</td><td class="num">90 µm</td><td class="num">40 µm (conservative knee)</td><td></td></tr>
+</table>
+<figure><img src="data:image/png;base64,@@IMG_ADAPT@@" alt="Adaptation run">
+<figcaption>Left: one adaptation sweep — motor current vs position with the firmware’s detected
+knee (seal contact) and stall (zero reference) against the true pin events. Right: the error is a
+deterministic bias, not noise — the defining property that makes it identifiable by better
+algorithms. Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">4 · Device impact — ideal PI vs realistic eTRV</div>
+<h2>Identical building, weather and solar; only the thermostat hardware differs</h2>
+<table>
+<tr><th>KPI (days 2–7)</th><th>Ideal PI</th><th>Realistic eTRV</th></tr>
+<tr><td>Discomfort</td><td class="num">342 K·h</td><td class="num">849 K·h</td></tr>
+<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">91.8 K·h</td><td class="num">38.4 K·h</td></tr>
+<tr><td>Boiler energy</td><td class="num">1973 kWh</td><td class="num">1882 kWh</td></tr>
+<tr><td>Valve travel / moves</td><td class="num">83 strokes / 33 099</td><td class="num">416 strokes / 4 056</td></tr>
+</table>
+<figure><img src="data:image/png;base64,@@IMG_CMP@@" alt="Ideal vs realistic comparison">
+<figcaption>Top: the valve-mounted sensor’s warm bias keeps the real device ~1 K under setpoint.
+Middle: nighttime limit cycling around the valve dead zone — the battery-drain failure mode.
+Bottom: sensor reading vs true room temperature. Script: <code>run_thermostat_comparison.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">5 · Manual valves — hydraulic balancing</div>
+<h2>Commissioning state and the operating benefit</h2>
+<table>
+<tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
+<tr><td>Commissioning flows (TRVs open)</td><td class="num">± 5 % of demand</td><td class="num">worst 3.4 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Commissioning return</td><td class="num">≈ 70 °C</td><td class="num">69.7 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">2.11 K → 1.64 K</td><td><span class="pass">PASS</span></td></tr>
+</table>
+<div class="finding"><em>Documented physics:</em> under exact-setpoint integral control the
+operating return equals supply − Q/(ṁ·c<sub>p</sub>) and is invariant to balancing — with 1.15×
+oversized radiators it stays ≈ 64 °C. The textbook 70 °C return exists in the commissioning
+state; the operating benefit of balancing is fair flow distribution during recovery.</div>
+<figure><img src="data:image/png;base64,@@IMG_BAL@@" alt="Balancing results">
+<figcaption>Morning recovery after night setback: per-room temperature deficits at boost + 3 h,
+as-built ring scatter (49 % flow deviation) vs the balanced state.
+Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">6 · Dynamics — oscillation signatures</div>
+<h2>Cycling boiler, riser lag, stochastic gains, real eTRVs</h2>
+<table>
+<tr><th>Signature</th><th>Field-data range</th><th>Measured</th><th></th></tr>
+<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">89 / day</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.1 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.093 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.79</td><td><span class="pass">PASS</span></td></tr>
+</table>
+<figure><img src="data:image/png;base64,@@IMG_OSC@@" alt="Oscillation traces">
+<figcaption>Day 2, 06–12 h: supply sawing on ~15-minute burner cycles; room temperatures dipping
+on window-opening events and drifting with solar; the eTRV flow staircase with bursts and
+chatter; burner duty blocks. Script: <code>run_oscillation_check.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">7 · Heat-exchange physics — radiator operating points</div>
+<h2>FMU steady states vs the logarithmic overtemperature model</h2>
+<table>
+<tr><th>Comparison</th><th>Range</th><th>Max deviation</th><th></th></tr>
+<tr><td>FMU vs exact EN 442 integral (N = 400)</td><td class="num">145 % → ~50 % of design flow</td><td class="num">0.6–1.8 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>LMTD formula vs exact integral</td><td class="num">entire staircase</td><td class="num">≤ 0.8 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>FMU at ~20 % of design flow</td><td class="num">trickle</td><td class="num">+10.7 % — rig artifact (multi-hour residence time, room drifting)</td><td></td></tr>
+</table>
+<figure><img src="data:image/png;base64,@@IMG_RAD@@" alt="Radiator operating points">
+<figcaption>Left: measured FMU operating points on the analytical curves — exact continuous
+solution, Buildings 5-element discretization, and the LMTD engineering formula, all at identical
+boundary conditions (riser-loss-corrected inlet, measured room temperature). Right: deviations
+across the throttling range. The Buildings discretization is consistent with the logarithmic
+overtemperature model. Script: <code>run_radiator_check.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">8 · Numerics — communication-step convergence</div>
+<h2>Same scenario at 30 s and 10 s co-simulation steps</h2>
+<table>
+<tr><th>Signature (shared day-2 window)</th><th>dt = 30 s</th><th>dt = 10 s</th><th>Difference</th></tr>
+<tr><td>Burner starts / day</td><td class="num">88.9</td><td class="num">90.4</td><td class="num">+1.6 %</td></tr>
+<tr><td>Supply sawtooth pk-pk</td><td class="num">19.5 K</td><td class="num">19.0 K</td><td class="num">−2.7 %</td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.093 K</td><td class="num">0.085 K</td><td class="num">−9.2 % (8 mK)</td></tr>
+<tr><td>Radiator flow CV</td><td class="num">0.77</td><td class="num">0.75</td><td class="num">−2.4 %</td></tr>
+<tr><td>Mean boiler power</td><td class="num">15.68 kW</td><td class="num">15.57 kW</td><td class="num">−0.7 %</td></tr>
+<tr><td>Mean room temperature</td><td class="num">19.066 °C</td><td class="num">19.071 °C</td><td class="num">± 0.0 %</td></tr>
+</table>
+<div class="finding"><em>Method note:</em> the trajectories de-phase over hours — inevitable in a
+relay-switched system, where any infinitesimal difference shifts switching instants — while the
+statistics agree within a few percent. The 30 s grid is statistically converged; runs must be
+compared by KPIs and signatures, never trajectory-by-trajectory. The 10 s run additionally
+exposed the pump’s internal volume as the last unprotected water state (solver excursion at
+41 h); the pump now runs a steady-state energy balance like the radiators.</div>
+<figure><img src="data:image/png;base64,@@IMG_DT@@" alt="Communication step comparison">
+<figcaption>Day 2, 07–10 h: supply sawtooth and one radiator flow at both communication steps —
+identical amplitude, period and character; phases drift apart as expected.
+Scripts: <code>run_oscillation_check.py [dt]</code>, <code>compare_dt.py</code>.</figcaption></figure>
+</section>
+
+<footer>Reproduce any figure: <code>docker run --rm -v ${PWD}:/work -w /work/sil
+buildingsimulator:dev python3 &lt;script&gt;.py</code> · parameter derivation with sources in
+<code>docs/building80s-parameters.md</code> · github.com/markisbell/buildingsimulator</footer>
+</div>
+"""
+
+html = TEMPLATE
+for key, name in IMAGES.items():
+    data = base64.b64encode((RESULTS / name).read_bytes()).decode()
+    html = html.replace(f"@@{key}@@", data)
+
+OUT.write_text(html, encoding="utf-8")
+print(f"wrote {OUT} ({OUT.stat().st_size/1e6:.1f} MB)")
