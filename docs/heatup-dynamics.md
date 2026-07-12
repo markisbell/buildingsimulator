@@ -31,9 +31,10 @@ coincides with the solar ramp.*
 
 ## 1. Phase 1 — quasi-linear rise (air node dominates)
 
-The zone is 2R2C: a fast air+furnishing node ($C_{air} \approx 15\,\mathrm{kJ/(m^2K)}$)
-and a slow structural mass node ($C_{mass} \approx 260\,\mathrm{kJ/(m^2K)}$, ISO 13790
-"heavy" class), coupled by $G_{int}$:
+The zone is 2R2C: a fast node — air, furniture and interior surface layers
+($C_{air} = 40\,\mathrm{kJ/(m^2K)}$, $\tau_{fast} \approx 41$ min) — and a slow
+structural mass node ($C_{mass} = 260\,\mathrm{kJ/(m^2K)}$, ISO 13790 "heavy" class),
+coupled by $G_{int}$:
 
 $$C_{air}\dot T_{air} = \dot Q_{conv} + G_{int}(T_{mass}-T_{air}) + G_{win}(T_{out}-T_{air})$$
 $$C_{mass}\dot T_{mass} = \dot Q_{rad} + G_{int}(T_{air}-T_{mass}) + G_{wall}(T_{out}-T_{mass})$$
@@ -104,20 +105,23 @@ glides ≈ 1 K lower (sensor bias) with relay-style night cycling.*
 
 | Window after setback | Rate | Mechanism |
 |---|---|---|
-| first hour | ≈ −2.2 K/h | **air-node fast phase**: with the valve shut, the air (small $C_{air}$) relaxes with $\tau \approx 25\,$min toward the still-warm mass; predicted sag ≈ $\frac{G_{win}}{G_{win}+G_{int}}(T_{mass}-T_{out}) \approx 1$ K below the mass node |
+| first hour | see figure | **air-node fast phase**: with the valve shut, the fast node relaxes with $\tau \approx 41\,$min toward the still-warm mass; predicted sag ≈ $\frac{G_{win}}{G_{win}+G_{int}}(T_{mass}-T_{out}) \approx 1$ K below the mass node |
 | hours 2-3 | ≈ −0.3 K/h | transition: air slaved to the slowly cooling structure |
 | rest of night | ≈ −0.14 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power; pure structural cooling would be ≈ −0.5 K/h initially |
 
 The apparent "fast cooldown" is therefore the *air separating from the structure*, not
 the building losing its stored heat — the masonry cools an order of magnitude slower.
-Two model notes: (i) the rooms are **not empty** — $C_{air}$ = 15 kJ/(m²K) ≈ 5× bare
-air lumps furniture/contents, mid-range of EnergyPlus zone-capacitance-multiplier
-practice (1-20) and consistent with the finding that empty-room assumptions distort
-dynamic simulations ([Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145));
+Two model notes: (i) the rooms are **not empty** — $C_{air}$ = 40 kJ/(m²K) ≈ 13× bare
+air lumps furniture, contents and the interior surface layers that move with the air
+(EnergyPlus zone-capacitance-multiplier practice 1-20; ISO 52016 surface-layer
+capacitance; empty-room assumptions distort dynamic simulations —
+[Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145));
 (ii) the air↔surface coupling follows the ISO 13790 convention
-$h_{is}·A_t = 3.45\,\mathrm{W/(m^2K)} \times 4.5·A_{floor}$, adopted after this
-analysis (it deepens surface coupling, shortens the fast phase, and raises the steady
-heat load to 65 W/m² — see building80s-parameters.md §6).
+$h_{is}·A_t = 3.45\,\mathrm{W/(m^2K)} \times 4.5·A_{floor}$. Both were calibrated after
+this analysis: the coupling raises the steady heat load to 65 W/m²
+(building80s-parameters.md §6), and the fast-node capacity sets
+$\tau_{fast} \approx 41$ min, inside the 0.5-2 h corridor that grey-box identification
+finds for furnished rooms.
 
 ## References
 

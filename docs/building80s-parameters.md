@@ -43,13 +43,16 @@ G_wall = 1.1 · U_wall·A_wall (+ floor position extras, to mass node)
 | Bath | 5.6 | 3.7 | +2.2 | +2.9 |
 
 Thermal mass (ISO 13790 "heavy"): C_mass = 260 kJ/(m²K)·A. The air node is **not an
-empty room**: C_air = 15 kJ/(m²K)·A ≈ 5× bare air, lumping furniture/contents per
-standard practice (EnergyPlus zone-capacitance multiplier, typical 1-20; the
-empty-room assumption is invalid for dynamic calculations —
+empty room**: C_air = **40 kJ/(m²K)·A** ≈ 13× bare air, lumping furniture, contents and
+the interior surface layers that move with the air (EnergyPlus zone-capacitance
+multiplier practice, typical 1-20; ISO 52016 surface-layer capacitance; the empty-room
+assumption is invalid for dynamic calculations —
 [Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145)). Air↔surfaces
 G_int = **15.5 W/(m²K)·A** per the ISO 13790 convention (h_is·A_t = 3.45 W/(m²K) ×
-4.5·A_floor), calibrated after the cooldown analysis in
-[heatup-dynamics.md](heatup-dynamics.md). Room-hall doors 15 W/K each; hall→stairwell
+4.5·A_floor). Both calibrated after the cooldown analysis in
+[heatup-dynamics.md](heatup-dynamics.md): the resulting fast time constant
+τ = C_air/(G_win+G_int) ≈ **41 min** matches grey-box identification of furnished rooms
+([Bacher & Madsen 2011](https://doi.org/10.1016/j.enbuild.2011.02.005), 0.5-2 h). Room-hall doors 15 W/K each; hall→stairwell
 10 W/K at 15 °C. Vertical slab coupling 1.7 W/(m²K)·A per stack.
 
 ## 4. Design loads and radiator sizing (DIN-style, -12 °C, rooms 20 °C, bath 24 °C)

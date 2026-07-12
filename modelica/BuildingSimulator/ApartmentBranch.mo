@@ -29,8 +29,11 @@ model ApartmentBranch
     Q_flow_nominal/4186/(TRadSup_nominal - TRadRet_nominal)
     "Design mass flow";
   // 2R2C zone: fast air node + slow structural mass node
-  parameter Modelica.Units.SI.HeatCapacity C_air = 1.5e6
-    "Air + furnishing capacity (fast node)";
+  parameter Modelica.Units.SI.HeatCapacity C_air = 2.56e6
+    "Fast-node capacity: air + furniture + interior surface layers,
+     40 kJ/(m2K) x A_floor (64 m2 default). With the ISO-strength coupling
+     the fast node includes what moves with the air; tau_fast ~ 40 min,
+     matching grey-box identification of furnished rooms";
   parameter Modelica.Units.SI.HeatCapacity C_mass = 13.5e6
     "Structural mass capacity (slow node)";
   parameter Modelica.Units.SI.ThermalConductance G_win = 40
