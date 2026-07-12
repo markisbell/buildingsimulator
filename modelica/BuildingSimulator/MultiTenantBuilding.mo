@@ -66,12 +66,18 @@ model MultiTenantBuilding
   Buildings.Fluid.FixedResistances.PressureDrop pipSup[nFlo](
     redeclare each package Medium = MediumW,
     m_flow_nominal={(nFlo - f + 1)*nApeFlo*m_flow_nominal_rad for f in 1:nFlo},
-    each dp_nominal=dpPipe_nominal) "Supply riser segments (bottom to top)";
+    each allowFlowReversal=false,
+    each dp_nominal=dpPipe_nominal)
+    "Supply riser segments (bottom to top). Forward-only: near-zero night
+     flows dither around zero otherwise, which breaks the supply-side
+     nonlinear system now that the radiators carry water states (same
+     robustness measure as in Building80s)";
 
   Buildings.Fluid.FixedResistances.PressureDrop pipRet[nFlo](
     redeclare each package Medium = MediumW,
     m_flow_nominal={(nFlo - f + 1)*nApeFlo*m_flow_nominal_rad for f in 1:nFlo},
-    each dp_nominal=dpPipe_nominal) "Return riser segments (bottom to top)";
+    each allowFlowReversal=false,
+    each dp_nominal=dpPipe_nominal) "Return riser segments (bottom to top), forward-only";
 
   // ---------- Plant ----------
   Buildings.Fluid.Movers.SpeedControlled_y pum(
@@ -95,6 +101,18 @@ model MultiTenantBuilding
     QMax_flow=nApt*QRad_nominal)
     "Ideal boiler tracking the supply temperature setpoint";
 
+  Buildings.Fluid.MixingVolumes.MixingVolume volBoi(
+    redeclare package Medium = MediumW,
+    m_flow_nominal=m_flow_nominal_tot,
+    V=0.08,
+    energyDynamics=Modelica.Fluid.Types.Dynamics.FixedInitial,
+    T_start=333.15,
+    nPorts=2)
+    "Boiler water content (~80 l). Plant-side state: decouples the supply
+     node from the branch flow networks now that the radiators carry
+     water states (same pattern as Building80s; without it the all-closed
+     night trickle makes the supply-side nonlinear system fail)";
+
   Buildings.Fluid.Sensors.TemperatureTwoPort senTSup(
     redeclare package Medium = MediumW,
     m_flow_nominal=m_flow_nominal_tot) "Supply temperature sensor";
@@ -117,9 +135,10 @@ model MultiTenantBuilding
     nPorts=1) "Expansion vessel / pressure reference";
 
 equation
-  // Plant loop
+  // Plant loop (boiler water mass between heater and supply header)
   connect(pum.port_b, boi.port_a);
-  connect(boi.port_b, senTSup.port_a);
+  connect(boi.port_b, volBoi.ports[1]);
+  connect(volBoi.ports[2], senTSup.port_a);
   connect(senTSup.port_b, pipSup[1].port_a);
   connect(pipRet[1].port_b, senTRet.port_a);
   connect(senTRet.port_b, pum.port_a);

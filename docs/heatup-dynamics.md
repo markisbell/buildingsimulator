@@ -41,7 +41,8 @@ coupled by $G_{int}$:
 $$C_{air}\dot T_{air} = \dot Q_{conv} + G_{int}(T_{mass}-T_{air}) + G_{win}(T_{out}-T_{air})$$
 $$C_{mass}\dot T_{mass} = \dot Q_{rad} + G_{int}(T_{air}-T_{mass}) + G_{wall}(T_{out}-T_{mass})$$
 
-At boost start the radiator output is maximal — the EN 442 law
+At boost start the radiator output climbs to its maximum within ≈ 20-30 min (the
+water/steel storage must recharge first — the short S-start at 06:00) — the EN 442 law
 $\dot Q = \dot Q_{nom}\,(\Delta\theta/\Delta\theta_{nom})^{n}$ with $n = 1.24$
 [EN 442-2; Buildings library radiator model] sees the coldest room of the day — and this
 peak power initially charges mostly the small $C_{air}$:
@@ -87,6 +88,12 @@ Three compounding, monotone effects:
 - **Mass saturation**: as $T_{mass} \to T_{air}$ the drain of phase 2 fades (this alone
   only flattens the curve; combined with the positive terms above it re-accelerates).
 
+At the *end* of recovery the radiator storage produces the field-typical **setpoint
+overshoot**: rooms that arrive while their radiator is still hot coast past the
+setpoint — the stored heat is on the room side of the valve (radiator-modeling.md §3).
+Enabling the storage raised the overheating KPI by ≈ 25 % (ideal PI) and ≈ 40 %
+(realistic eTRV) in the comparison run.
+
 ## 4. Implication for control research
 
 Naive optimal-start algorithms extrapolate the phase-1 slope and systematically
@@ -104,15 +111,17 @@ The cooldown after setback shows the same two-node structure in reverse
 
 ![Evening cooldown: ideal PI vs realistic eTRV](figures/cooldown_analysis.png)
 
-*Fig. 3 — Room temperature and radiator power after the 22:00 setback. The ideal PI
-free-cools for ≈ 3 h before re-engaging at the night setpoint; the realistic eTRV
-glides ≈ 1 K lower (sensor bias) with relay-style night cycling.*
+*Fig. 3 — Room temperature and radiator power after the 22:00 setback. The radiator
+power decays over ≈ 1.5 h (stored water/steel heat) instead of stopping with the valve;
+the ideal PI free-cools for ≈ 3.7 h before re-engaging at the night setpoint — with a
+slight undershoot-and-wobble, the PI fighting the emission lag; the realistic eTRV
+glides ≈ 1 K lower (sensor bias) with slow charge/discharge night cycles.*
 
 | Window after setback | Rate | Mechanism |
 |---|---|---|
-| first hour | −1.8 K/h | **air-node fast phase**: with the valve shut, the fast node relaxes with $\tau \approx 41\,$min toward the still-warm mass; predicted sag ≈ $\frac{G_{win}}{G_{win}+G_{int}}(T_{mass}-T_{out}) \approx 1$ K below the mass node |
-| hours 2-3 | −0.57 K/h | transition: air slaved to the slowly cooling structure |
-| rest of night | −0.14 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power; pure structural cooling would be ≈ −0.5 K/h initially |
+| first hour | −1.5 K/h | **cushioned air-node fast phase**: the fast node relaxes with $\tau \approx 41\,$min, but the radiator/riser storage keeps feeding the room (bare relaxation without it: −1.8 K/h) |
+| hours 2-3 | −0.76 K/h | transition: the storage is spent; the delayed descent catches up, air slaved to the slowly cooling structure |
+| rest of night | −0.16 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power; pure structural cooling would be ≈ −0.5 K/h initially |
 
 The apparent "fast cooldown" is therefore the *air separating from the structure*, not
 the building losing its stored heat — the masonry cools an order of magnitude slower.

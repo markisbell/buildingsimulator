@@ -88,10 +88,14 @@ model ApartmentBranch
     dpFixed_nominal=2000,
     from_dp=true,
     allowFlowReversal=false,
-    use_strokeTime=true,
-    strokeTime=60,
+    use_strokeTime=false,
     flowCharacteristics(y=yCha, phi=phiCha))
-    "TRV insert (1.5 mm stroke, sealing dead zone; 60 s full stroke by eTRV motor)";
+    "TRV insert (1.5 mm stroke, sealing dead zone). The 60 s motor stroke
+     is rate-limited in the Python device model, not filtered here: the
+     actuator filter states get entangled with the branch pressure drops
+     by index reduction (dynamic state selection) once the radiators
+     carry water states, and that state set breaks the solver when
+     valves move at trickle flow (sil/probe_raddyn.py)";
 
   Buildings.Fluid.HeatExchangers.Radiators.RadiatorEN442_2 rad(
     redeclare final package Medium = Medium,
@@ -101,11 +105,18 @@ model ApartmentBranch
     final TAir_nominal=TAirRad_nominal,
     T_start=TRadRet_nominal,
     allowFlowReversal=false,
-    energyDynamics=Modelica.Fluid.Types.Dynamics.SteadyState,
-    dp_nominal=0)
-    "Radiator (EN 442-2), steady-state energy balance: the water states at
-     trickle flows destabilize the CS solver; dynamics live in the zone
-     masses, boiler volume and riser columns";
+    energyDynamics=Modelica.Fluid.Types.Dynamics.FixedInitial,
+    VWat=8e-6*Q_flow_nominal,
+    mDry=0.030*Q_flow_nominal,
+    dp_nominal=500)
+    "Radiator (EN 442-2) with dynamic energy balance: the water/steel
+     storage (~8 l + 30 kg per kW, era steel/DIN radiators; library
+     defaults 5.8 l + 26 kg are for modern panels) carries the emission
+     lag that produces the field-typical setpoint overshoot after boost
+     and cushions the first cooldown hour. dp_nominal 500 Pa: the real
+     radiator+connection drop, and the smooth series resistance that
+     keeps the branch flow system solvable when the valve moves off its
+     seat at trickle flows (probe: sil/probe_raddyn.py)";
 
   Buildings.Fluid.Sensors.MassFlowRate senM(redeclare final package Medium = Medium);
 

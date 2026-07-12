@@ -77,7 +77,7 @@ inside the range certified heads exhibit.
 | Quick-opening characteristic incl. dead zone | FMU: `TwoWayTable` | `yCha`/`phiCha` in `ApartmentBranch` (anchor: 80 % flow at 30 % stroke) |
 | Seat leakage ~0.04 % | FMU | `phiCha[1] = 4e-4` |
 | Q = kv·√Δp, authority, riser interaction | FMU: pressure/flow network | `dpValve_nominal = 10 kPa`, `dpFixed = 2 kPa` |
-| Motor travel time | FMU: actuator filter | `strokeTime = 60 s` |
+| Motor travel time | SIL harness: rate limit on `yVal` commands (was an in-FMU filter; its states form a failing dynamic state set with the branch pressure drops now that radiators carry water states — radiator-modeling.md §3) | 60 s full stroke |
 | Backlash/hysteresis (0.1 mm ≈ 0.45 K) | Python device model | `backlash_mm` |
 | Closing-point calibration error | Python device model | `calibration_offset_mm` |
 | Presetting rings | not separate — `dpValve_nominal` sizing plays this role at design flow | — |

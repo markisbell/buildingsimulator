@@ -133,8 +133,8 @@ the pump operating point).
 **Balancing target and results:** rings are set to the *demand* flow (design load over
 the 20 K spread = radiator flow / 1.3). Verified (all PASS):
 
-- Commissioning state (TRVs open): flows within **3.4 %** of demand, return **66.6 °C**
-  — the textbook 90/70 picture. The initial all-open deviation (~30 %) is dominated by
+- Commissioning state (TRVs open): flows within **3.5 %** of demand, return **63.4 °C**
+  — the textbook 90/70 picture. The initial all-open deviation (~28 %) is dominated by
   the uniform 1.3× oversize level, which the rings absorb; the flow *distribution*
   itself is near-uniform in the self-consistently sized network.
 - Steady operation unchanged: 65.0 W/m², rooms at setpoint ±0.0 K — and return stays
@@ -143,7 +143,7 @@ the 20 K spread = radiator flow / 1.3). Verified (all PASS):
   P-control offsets or non-oversized radiators.
 - Operating benefit = fair flow distribution when all TRVs demand maximum: with
   realistic as-built ring scatter (43 % flow deviation), morning-recovery deficit
-  spread across rooms is 1.41 K; after balancing 1.07 K
+  spread across rooms is 1.59 K; after balancing 1.26 K
   (`results/balancing_80s.png`). Real imbalance enters through the as-built ring
   positions, which the seeded scatter represents. (The 1.3× sizing also shrinks the
   absolute deficits: recovery is faster everywhere, so unfairness has less time to
@@ -159,25 +159,34 @@ Real measurement traces oscillate; the model now reproduces the mechanisms
 
 - **Two-point boiler** (`sil/boiler.py`, SIL supervisory logic through `TSupSet`):
   ±5 K hysteresis, 4-min minimum runtimes, 80 l boiler water mass → supply sawtooth
-  19.2 K pk-pk, 83 burner starts/day (~3.5/h, era-typical).
+  19.4 K pk-pk, 73 burner starts/day (~3/h, era-typical; the dynamic radiator
+  storage filters the load the boiler sees and lengthened the cycles).
 - **Riser water columns** (6 l per stack base, shaft losses 6 W/K) → transport lag of
   the supply front.
 - **Stochastic internal gains** (`sil/gains.py`, seeded): occupancy blocks, cooking and
   bath bursts, appliance noise, 1-2 window-opening cold pulses per room and day
-  → room ripple 0.04 K (detrended std; the C_air = 40 kJ/(m²K) fast node filters
-  gain noise strongly), radiator flow CV 0.80 with the eTRV staircase/chatter
-  pattern of field data.
+  → room ripple 0.05 K (detrended std; the C_air = 40 kJ/(m²K) fast node filters
+  gain noise strongly), radiator flow CV 1.07 with the eTRV staircase/chatter
+  pattern of field data. The flow CV rose from 0.80 when the radiator storage was
+  enabled — the emission lag strengthens TRV limit cycling, exactly the
+  destabilization the quasi-static model was documented to underestimate.
 
 Numerical robustness at trickle flows required: forward-only flow in branches and
-risers, lumped stack-base volumes (mid-riser volumes destabilize), radiator
-**steady-state energy balance** (dynamics live in zone masses, boiler and riser
-volumes), TRV dead-zone leakage floor 0.15-0.3 %.
+risers, lumped stack-base volumes (mid-riser volumes destabilize), TRV dead-zone
+leakage floor 0.15-0.3 %. The radiators originally ran a steady-state energy balance
+for the same reason; with the fixes above in place their water/steel storage
+(8 l + 30 kg per kW, emission lag 30-50 min) is dynamic again — the source of the
+field-typical boost overshoot and the cushioned first cooldown hour
+(radiator-modeling.md §3). Two consequences of that change: radiators carry their
+real 500 Pa hydraulic drop, and the 60 s valve stroke is a harness-side rate limit
+instead of an in-FMU filter (the filter states formed a failing dynamic state set
+with the branch pressure drops once the water states existed).
 
 **Radiator operating points** (`sil/run_radiator_check.py`,
 `results/radiator_check_80s.png`): steady FMU points across a TRV staircase agree with
-the exact continuous EN 442 solution within **0.3-1.8 %** from full down to ~37 % of
+the exact continuous EN 442 solution within **0.4-1.8 %** from full down to ~37 % of
 design flow (systematic +1-2 % from the two-node zone: the radiant fraction sees the
-warmer mass node). The apparent +7.9 % at ~15 % flow is a rig artifact (multi-hour
-residence time, room still drifting). The **LMTD formula agrees with the exact
-integral within 0.8 % everywhere** — the Buildings 5-element discretization is
+warmer mass node). The apparent +9.3 % at ~15 % flow is a rig artifact (multi-hour
+residence time — longer still with the water/steel storage — and a drifting room).
+The **LMTD formula agrees with the exact integral within 0.8 % everywhere** — the Buildings 5-element discretization is
 consistent with the logarithmic-overtemperature model across the throttling range.

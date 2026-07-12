@@ -4,6 +4,8 @@ The FMU is the plant (building + hydronic system); all control intelligence
 lives outside, in Python controller objects (see controllers.py).
 """
 
+import os
+
 from fmpy import read_model_description, extract
 from fmpy.fmi2 import FMU2Slave
 
@@ -24,7 +26,13 @@ class BuildingFMU:
             instanceName="buildingsim",
         )
         self.time = start_time
-        self._fmu.instantiate()
+        # BUILDINGSIM_FMU_DEBUG=logNonlinearSystems[,logEvents,...] enables
+        # FMI debug categories (needed to surface LOG_NLS & friends from the
+        # OpenModelica runtime when diagnosing solver failures)
+        debug_cats = os.environ.get("BUILDINGSIM_FMU_DEBUG", "")
+        self._fmu.instantiate(loggingOn=bool(debug_cats))
+        if debug_cats:
+            self._fmu.setDebugLogging(True, debug_cats.split(","))
         if parameters:
             self.set_inputs(parameters)
         self._fmu.setupExperiment(startTime=start_time)
@@ -63,6 +71,14 @@ class BuildingFMU:
         self._fmu.freeInstance()
 
 
+STROKE_TIME = 60.0
+"""Full-stroke travel time of the eTRV motor in seconds. Valve commands
+(yVal*) are rate-limited to this speed harness-side: the FMU valve applies
+positions instantly since the in-FMU actuator filter had to go (its states
+get entangled with the branch pressure drops by dynamic state selection
+once the radiators carry water states — see ApartmentBranch.mo)."""
+
+
 def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
                    output_names, record_dt=None, on_record=None,
                    parameters=None):
@@ -90,10 +106,17 @@ def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
     t = 0.0
     actions = dict(act0)
 
+    max_dy = control_dt / STROKE_TIME  # motor speed limit per control step
+
     while t < duration:
         meas = fmu.get_outputs(output_names)
         # controllers observe, then act (sampled control like a real thermostat)
-        actions = {name: ctrl.step(t, meas) for name, ctrl in controllers.items()}
+        wanted = {name: ctrl.step(t, meas) for name, ctrl in controllers.items()}
+        actions = {
+            name: (min(max(y, actions[name] - max_dy), actions[name] + max_dy)
+                   if name.startswith("yVal") else y)
+            for name, y in wanted.items()
+        }
         exo = scenario(t)
         fmu.set_inputs({**exo, **actions})
 

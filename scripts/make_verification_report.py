@@ -15,6 +15,7 @@ IMAGES = {
     "IMG_BAL": "balancing_80s.png",
     "IMG_OSC": "oscillation_check_80s.png",
     "IMG_RAD": "radiator_check_80s.png",
+    "IMG_ABDYN": "radiator_dynamics_ab.png",
     "IMG_DT": "dt_comparison_80s.png",
 }
 
@@ -82,9 +83,10 @@ footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
   <h1>Verification report — 1980s German multi-family building simulator</h1>
   <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
   3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
-  repo commit <b>HEAD</b> · 2026-07-12 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
+  repo commit <b>HEAD</b> · 2026-07-13 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
   furnished-room fast node (C<sub>air</sub> = 40 kJ/m²K, τ<sub>fast</sub> ≈ 41 min) ·
-  radiators 1.3× design load (era sizing)</div>
+  radiators 1.3× design load (era sizing), dynamic water/steel storage (8 l + 30 kg per kW,
+  τ<sub>e</sub> ≈ 30–50 min)</div>
 </header>
 <p class="lede">Every verification claim, next to its graphical evidence. Each figure is the
 unmodified output of a reproducible script in <code>sil/</code>; the numbers in the tables
@@ -145,10 +147,10 @@ algorithms. Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
 <h2>Identical building, weather and solar; only the thermostat hardware differs</h2>
 <table>
 <tr><th>KPI (days 2–7)</th><th>Ideal PI</th><th>Realistic eTRV</th></tr>
-<tr><td>Discomfort</td><td class="num">418 K·h</td><td class="num">908 K·h</td></tr>
-<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">131 K·h</td><td class="num">46.1 K·h</td></tr>
-<tr><td>Boiler energy</td><td class="num">2018 kWh</td><td class="num">1922 kWh</td></tr>
-<tr><td>Valve travel / moves</td><td class="num">77 strokes / 29 033</td><td class="num">735 strokes / 4 526</td></tr>
+<tr><td>Discomfort</td><td class="num">427 K·h</td><td class="num">935 K·h</td></tr>
+<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">164 K·h</td><td class="num">65.4 K·h</td></tr>
+<tr><td>Boiler energy</td><td class="num">2022 kWh</td><td class="num">1921 kWh</td></tr>
+<tr><td>Valve travel / moves</td><td class="num">84 strokes / 28 054</td><td class="num">326 strokes / 3 386</td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_CMP@@" alt="Ideal vs realistic comparison">
 <figcaption>Top: the valve-mounted sensor’s warm bias keeps the real device ~1 K under setpoint.
@@ -162,8 +164,8 @@ Bottom: sensor reading vs true room temperature. Script: <code>run_thermostat_co
 <table>
 <tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
 <tr><td>Commissioning flows (TRVs open)</td><td class="num">± 5 % of demand</td><td class="num">worst 3.4 %</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Commissioning return</td><td class="num">≈ 70 °C</td><td class="num">66.6 °C</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">1.41 K → 1.07 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Commissioning return</td><td class="num">≈ 70 °C</td><td class="num">63.4 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">1.59 K → 1.26 K</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <div class="finding"><em>Documented physics:</em> under exact-setpoint integral control the
 operating return equals supply − Q/(ṁ·c<sub>p</sub>) and is invariant to balancing — with 1.3×
@@ -180,10 +182,10 @@ Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json
 <h2>Cycling boiler, riser lag, stochastic gains, real eTRVs</h2>
 <table>
 <tr><th>Signature</th><th>Field-data range</th><th>Measured</th><th></th></tr>
-<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">83 / day</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.2 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.038 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.80</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">73 / day</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.4 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.050 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">1.07</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_OSC@@" alt="Oscillation traces">
 <figcaption>Day 2, 06–12 h: supply sawing on ~15-minute burner cycles; room temperatures dipping
@@ -196,10 +198,18 @@ chatter; burner duty blocks. Script: <code>run_oscillation_check.py</code>.</fig
 <h2>FMU steady states vs the logarithmic overtemperature model</h2>
 <table>
 <tr><th>Comparison</th><th>Range</th><th>Max deviation</th><th></th></tr>
-<tr><td>FMU vs exact EN 442 integral (N = 400)</td><td class="num">full → ~37 % of design flow</td><td class="num">0.3–1.8 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>FMU vs exact EN 442 integral (N = 400)</td><td class="num">full → ~37 % of design flow</td><td class="num">0.4–1.8 %</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>LMTD formula vs exact integral</td><td class="num">entire staircase</td><td class="num">≤ 0.8 %</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>FMU at ~15 % of design flow</td><td class="num">trickle</td><td class="num">+7.9 % — rig artifact (multi-hour residence time, room drifting)</td><td></td></tr>
+<tr><td>FMU at ~15 % of design flow</td><td class="num">trickle</td><td class="num">+9.3 % — rig artifact (multi-hour residence time, room drifting)</td><td></td></tr>
 </table>
+<div class="finding"><em>Energy dynamics:</em> the radiators carry their water/steel storage
+(8 l + 30 kg per kW, emission lag ≈ 30–50 min) since the field-realism revision. The A/B against
+the quasi-static build shows the field signatures appearing: boost overshoot (overheating +25 %
+ideal / +40 % eTRV), the first cooldown hour cushioned (−1.5 vs −1.8 K/h), slow eTRV
+charge/discharge night cycles (flow CV 0.80 → 1.07), longer burner cycles (83 → 73 starts/day).</div>
+<figure><img src="data:image/png;base64,@@IMG_ABDYN@@" alt="Radiator dynamics A/B">
+<figcaption>Heat-up and cooldown, quasi-static (left) vs dynamic (right) radiators, identical
+scenario. Script: <code>compare_radiator_dynamics.py</code>.</figcaption></figure>
 <figure><img src="data:image/png;base64,@@IMG_RAD@@" alt="Radiator operating points">
 <figcaption>Left: measured FMU operating points on the analytical curves — exact continuous
 solution, Buildings 5-element discretization, and the LMTD engineering formula, all at identical

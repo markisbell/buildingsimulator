@@ -14,8 +14,8 @@ quasi-statically:
 | Subsystem | Dynamic states | Quasi-static (no states) |
 |---|---|---|
 | Zone | air/fast node, structural mass node (per room) | — |
-| Radiator | — | element chain (steady-state energy balance) |
-| Valve/actuator | opening filter (60 s stroke) | flow–pressure relation |
+| Radiator | water + steel temperature per element (5 per radiator) | emission characteristic (algebraic EN 442 law) |
+| Valve/actuator | — (60 s stroke rate-limited harness-side) | flow–pressure relation |
 | Hydraulic network | — | algebraic pressure/flow solution |
 | Distribution | riser water column (1 per stack), boiler water mass | pipes, return side, pump volume |
 | Devices (Python) | sensor-bias lag, integrators, relay states | — |
@@ -45,28 +45,38 @@ instead), moisture/latent loads, variable convection coefficients, furniture as 
 separate third node, solar distribution by geometry (fixed split), door opening/closing
 dynamics (constant $G_{door}$ = 15 W/K).
 
-## 3. The radiator: quasi-static emission on a nonlinear characteristic
+## 3. The radiator: EN 442 characteristic with water/steel storage
 
 - **Element-wise EN 442 law** $\dot Q_i \propto |\Delta T_i|^{1.24}$ over 5 elements —
   the emission *characteristic* is fully nonlinear and log-mean-consistent (validated to
-  0.3–1.8 % against the exact integral, see radiator-modeling.md §3).
-- **Steady-state energy balance**: the water/steel storage
-  ($\approx$ 6 kg water per kW rating, τ of order 5–15 min at design flow) carries **no
-  state**. The radiator output follows its boundary conditions instantly.
+  0.4–1.8 % against the exact integral, see radiator-modeling.md §4).
+- **Dynamic energy balance**: each element stores heat in its water volume and lumped
+  steel mass — 8 l + 30 kg per kW rating (1980s steel/DIN radiators) —
+  $C_{rad} \approx 48$ kJ/K per kW, emission lag $\tau_e \approx$ **30–50 min** at
+  operating overtemperature, longer as the radiator cools.
 
-Justification and consequence: the neglected radiator lag is a fraction of
-$\tau_{fast}$ = 41 min, and the *supply-side* lags that shape what the radiator sees are
-retained upstream (riser column, boiler mass). The honest caveat: a missing emission lag
-makes the valve→room loop slightly *faster/cleaner* than reality, so simulated TRV limit
-cycles are, if anything, mildly **underestimated** — conservative for claims about
-oscillation problems, optimistic by a small margin for controller stability margins.
-(The original motivation was numerical: water states at trickle flows destabilized the
-CS solver — building80s-parameters.md §8.)
+This storage is what produces the field-typical **setpoint overshoot** after the
+morning boost (the stored heat is on the room side of the valve — no valve-side
+controller can hold it back) and the **cushioned first cooldown hour** after the
+evening setback; it also adds the phase lag that drives realistic TRV limit cycling
+(radiator-modeling.md §3).
+
+History: the radiator originally ran a *steady-state* energy balance because water
+states at trickle flows destabilized the CS solver (building80s-parameters.md §8).
+After the TRV leakage floor, forward-only flow and the steady-state pump removed that
+failure mode, the storage was re-enabled when comparison with field recordings showed
+the two missing signatures above — resolving the earlier documented caveat that
+quasi-static emission underestimates limit cycles.
 
 ## 4. Valve and device timing
 
-- FMU-side: opening moves through a 60 s stroke filter (eTRV motor); the flow–pressure
-  network is algebraic (incompressible, no water hammer), forward-flow-only.
+- The eTRV motor's 60 s full-stroke travel is enforced as a rate limit in the SIL
+  harness (`sil/harness.py`, applied to every controller type). It used to be a
+  2nd-order filter inside the FMU valve, but those filter states get entangled with
+  the branch pressure drops by index reduction (dynamic state selection) once the
+  radiators carry water states — the resulting state set broke the solver whenever
+  valves moved at trickle flow. The flow–pressure network itself is algebraic
+  (incompressible, no water hammer), forward-flow-only.
 - Python-side (the device under test): 300 s firmware sampling, 0.1 mm backlash,
   sensor bias with 600 s lag, quantization/noise — these are *deliberately* the
   dominant "controller dynamics".
@@ -87,15 +97,17 @@ CS solver — building80s-parameters.md §8.)
 | Scale | Mechanism | Modeled as |
 |---|---|---|
 | < 1 s | pressure/flow redistribution | algebraic |
-| 60 s | valve stroke | 1st-order filter (FMU) |
+| 60 s | valve stroke | rate limit (harness) |
 | 5 min | eTRV firmware sampling | discrete (Python) |
 | ≈ 8–25 min | riser transport, boiler mass + relay | 9 volumes + relay logic |
+| ≈ 30–50 min | radiator emission lag (water + steel) | 5 states per radiator |
 | ≈ 41 min | zone fast node (air + contents + surface layers) | state |
 | ≈ 40 h | zone structural mass | state |
 
 Each quasi-static simplification sits at least a factor ~3 below the next modeled
-scale, except the radiator emission lag (§3), which is the one documented borderline
-case.
+scale. The former borderline case — the radiator emission lag — is a modeled state
+since the field-realism revision (§3); that the radiator and zone fast node share a
+time scale is physical, and exactly the interaction that makes TRV loops hard.
 
 ## References
 
