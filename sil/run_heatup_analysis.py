@@ -44,3 +44,24 @@ axes[3].set_xlabel("hour of day 2")
 fig.tight_layout()
 fig.savefig(ROOT / "results" / "heatup_decomposition.png", dpi=150)
 print("wrote results/heatup_decomposition.png")
+
+# ---- phase-annotated overview figure (docs/heatup-dynamics.md) ----
+fig2, ax = plt.subplots(figsize=(10, 4.6))
+ax.plot(h, z["TRoom[1]"] - C2K, lw=2.0, color="#B8432F")
+phases = [(6.0, 7.0, "#F6E3DC", "phase 1\nair node,\nquasi-linear"),
+          (7.0, 8.6, "#E9E7E0", "phase 2\nmass recharge +\nfalling radiator power"),
+          (8.6, 11.5, "#DCE8F2", "phase 3\nsolar / de-saturation /\nneighbour coupling")]
+for x0, x1, color, label in phases:
+    ax.axvspan(x0, x1, color=color, zorder=0)
+    ax.text((x0 + x1) / 2, 16.35, label, ha="center", fontsize=8.5,
+            color="#444444")
+ax.axvline(6.0, color="gray", ls=":", lw=0.9)
+ax.text(6.02, 19.6, "boost 06:00", fontsize=8.5, color="gray")
+ax.set_xlim(4.5, 13)
+ax.set_ylim(15.7, 20.1)
+ax.set_xlabel("hour of day 2")
+ax.set_ylabel("room temperature / °C")
+ax.set_title("Three-phase heat-up after night setback — apartment 1 (south)")
+fig2.tight_layout()
+fig2.savefig(ROOT / "results" / "heatup_phases.png", dpi=150)
+print("wrote results/heatup_phases.png")

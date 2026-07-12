@@ -1,11 +1,16 @@
 # Heat-up dynamics after setback: why recovery is not exponential
 
-**Observed behavior** (all scenarios, reproducible via `sil/run_heatup_analysis.py` →
-`results/heatup_decomposition.png`): after the morning boost the room temperature rises
-**quasi-linearly**, then **decelerates** into a knee, and later **re-accelerates** —
-although the radiator *flow* is approximately constant throughout. A single-time-constant
-(exponential) model cannot produce this shape; the mechanisms below can, and all of them
-are deliberately present in the simulator.
+**Observed behavior** (all scenarios, reproducible via `sil/run_heatup_analysis.py`):
+after the morning boost the room temperature rises **quasi-linearly**, then
+**decelerates** into a knee, and later **re-accelerates** — although the radiator *flow*
+is approximately constant throughout. A single-time-constant (exponential) model cannot
+produce this shape; the mechanisms below can, and all of them are deliberately present
+in the simulator.
+
+![Three-phase heat-up after night setback](figures/heatup_phases.png)
+
+*Fig. 1 — Measured room temperature (living room, south, generic building with realistic
+eTRVs, day 2) with the three phases discussed below.*
 
 ## 0. The premise to discard: constant flow ≠ constant power
 
@@ -16,6 +21,13 @@ $$\dot Q = \dot m \, c_p \, (T_{sup} - T_{ret}),$$
 and $T_{ret}$ is a *free* variable set by the radiator's heat exchange with the room. In
 the decomposition run, flow is pinned at ≈ 255 l/h from 06:00 while radiator power falls
 from 5.4 kW to 3 kW — the water-side spread collapses as room and return warm up.
+
+![Heat-up decomposition: room temperature, radiator power and solar gain, water temperatures, flow](figures/heatup_decomposition.png)
+
+*Fig. 2 — The full decomposition: room temperature (top), radiator power vs solar gain
+(second), supply/return temperatures (third), and the approximately constant radiator
+flow (bottom). Radiator power decays at constant flow; the phase-3 re-acceleration
+coincides with the solar ramp.*
 
 ## 1. Phase 1 — quasi-linear rise (air node dominates)
 
