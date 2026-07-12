@@ -46,8 +46,10 @@ model ApartmentBranch
 
   parameter Real yCha[:] = {0, 0.03, 0.06, 0.10, 0.15, 0.22, 0.30, 0.45, 0.65, 1.0}
     "Valve characteristic: normalized pin lift (1.0 = 1.5 mm stroke)";
-  parameter Real phiCha[:] = {4e-4, 6e-4, 1.2e-3, 0.12, 0.35, 0.60, 0.78, 0.88, 0.94, 1.0}
-    "Valve characteristic: Kv/Kvs, quick-opening (RA-N-like: 80 % flow at 30 % stroke)";
+  parameter Real phiCha[:] = {1.5e-3, 2e-3, 3e-3, 0.12, 0.35, 0.60, 0.78, 0.88, 0.94, 1.0}
+    "Valve characteristic: Kv/Kvs, quick-opening (RA-N-like: 80 % flow at
+     30 % stroke). Dead-zone floor 0.15-0.3 % keeps closed radiators
+     hydraulically connected (a few-watt trickle) for solver robustness";
 
   Modelica.Fluid.Interfaces.FluidPort_a port_a(redeclare package Medium = Medium)
     "Supply connection (from riser)";
@@ -81,6 +83,7 @@ model ApartmentBranch
     dpValve_nominal=10000,
     dpFixed_nominal=2000,
     from_dp=true,
+    allowFlowReversal=false,
     use_strokeTime=true,
     strokeTime=60,
     flowCharacteristics(y=yCha, phi=phiCha))
@@ -93,8 +96,12 @@ model ApartmentBranch
     final T_b_nominal=TRadRet_nominal,
     final TAir_nominal=TAirRad_nominal,
     T_start=TRadRet_nominal,
+    allowFlowReversal=false,
+    energyDynamics=Modelica.Fluid.Types.Dynamics.SteadyState,
     dp_nominal=0)
-    "Radiator (EN 442-2), warm-started at return temperature";
+    "Radiator (EN 442-2), steady-state energy balance: the water states at
+     trickle flows destabilize the CS solver; dynamics live in the zone
+     masses, boiler volume and riser columns";
 
   Buildings.Fluid.Sensors.MassFlowRate senM(redeclare final package Medium = Medium);
 
@@ -104,6 +111,7 @@ model ApartmentBranch
     dpValve_nominal=dpPreset_nominal,
     l=0.01,
     linearized=true,
+    allowFlowReversal=false,
     use_strokeTime=false)
     "Manual presetting ring (linear valve, linearized flow law: adequate for
      a static setting and keeps the 32-valve network solvable)";

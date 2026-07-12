@@ -129,3 +129,32 @@ the 20 K spread = radiator flow / 1.15). Verified (all PASS):
 
 Baseline states for control experiments: **as-built** (scattered rings), **open rings**
 (idealized-unbalanced), **balanced** (`results/presets_80s.json`).
+
+## 8. Oscillation realism and radiator validation
+
+Real measurement traces oscillate; the model now reproduces the mechanisms
+(`sil/run_oscillation_check.py`, all criteria PASS, `results/oscillation_check_80s.png`):
+
+- **Two-point boiler** (`sil/boiler.py`, SIL supervisory logic through `TSupSet`):
+  ±5 K hysteresis, 4-min minimum runtimes, 80 l boiler water mass → supply sawtooth
+  19 K pk-pk, 89 burner starts/day (~3.7/h, era-typical).
+- **Riser water columns** (6 l per stack base, shaft losses 6 W/K) → transport lag of
+  the supply front.
+- **Stochastic internal gains** (`sil/gains.py`, seeded): occupancy blocks, cooking and
+  bath bursts, appliance noise, 1-2 window-opening cold pulses per room and day
+  → room ripple 0.09 K (detrended std), radiator flow CV 0.79 with the eTRV
+  staircase/chatter pattern of field data.
+
+Numerical robustness at trickle flows required: forward-only flow in branches and
+risers, lumped stack-base volumes (mid-riser volumes destabilize), radiator
+**steady-state energy balance** (dynamics live in zone masses, boiler and riser
+volumes), TRV dead-zone leakage floor 0.15-0.3 %.
+
+**Radiator operating points** (`sil/run_radiator_check.py`,
+`results/radiator_check_80s.png`): steady FMU points across a TRV staircase agree with
+the exact continuous EN 442 solution within **0.6-1.8 %** from 145 % down to ~50 % of
+design flow (systematic +1-2 % from the two-node zone: the radiant fraction sees the
+warmer mass node). The apparent +10.7 % at ~20 % flow is a rig artifact (multi-hour
+residence time, room still drifting). The **LMTD formula agrees with the exact
+integral within 0.8 % everywhere** — the Buildings 5-element discretization is
+consistent with the logarithmic-overtemperature model across the throttling range.

@@ -125,16 +125,42 @@ model Building80s
     each dpValve_nominal=2000,
     each l=0.01,
     each linearized=true,
+    each allowFlowReversal=false,
     each use_strokeTime=false)
     "Riser balancing valves at the riser bases (yBalance inputs)";
 
   Buildings.Fluid.FixedResistances.PressureDrop pipSup[nFlo, nSta](
     redeclare each package Medium = MediumW,
     m_flow_nominal={{mSta_nominal[s]*(nFlo - f + 1)/nFlo for s in 1:nSta} for f in 1:nFlo},
+    each allowFlowReversal=false,
     each dp_nominal=300) "Supply riser segments";
+
+  Buildings.Fluid.MixingVolumes.MixingVolume volSup[nSta](
+    redeclare each package Medium = MediumW,
+    m_flow_nominal=mSta_nominal,
+    each V=0.006,
+    each allowFlowReversal=false,
+    each energyDynamics=Modelica.Fluid.Types.Dynamics.FixedInitial,
+    each T_start=343.15,
+    each nPorts=2)
+    "Riser water column, lumped at the stack base: transport lag of the
+     supply front. One volume per stack (mid-riser volumes between nearly
+     closed segments destabilize the solver at night flows)";
+
+  Modelica.Thermal.HeatTransfer.Components.ThermalConductor conRis[nSta](
+    each G=6) "Riser heat loss to the shaft (weak 80s insulation)";
+
+  Buildings.Fluid.MixingVolumes.MixingVolume volBoi(
+    redeclare package Medium = MediumW,
+    m_flow_nominal=m_flow_nominal_tot,
+    V=0.08,
+    energyDynamics=Modelica.Fluid.Types.Dynamics.FixedInitial,
+    T_start=343.15,
+    nPorts=2) "Boiler water content (cast-iron 30 kW class, ~80 l)";
   Buildings.Fluid.FixedResistances.PressureDrop pipRet[nFlo, nSta](
     redeclare each package Medium = MediumW,
     m_flow_nominal={{mSta_nominal[s]*(nFlo - f + 1)/nFlo for s in 1:nSta} for f in 1:nFlo},
+    each allowFlowReversal=false,
     each dp_nominal=300) "Return riser segments";
 
   Buildings.Fluid.Movers.SpeedControlled_y pum(
@@ -165,9 +191,10 @@ model Building80s
     redeclare package Medium = MediumW, p=300000, T=343.15, nPorts=1);
 
 equation
-  // plant loop and bypass
+  // plant loop and bypass (boiler water mass shapes the cycling sawtooth)
   connect(pum.port_b, boi.port_a);
-  connect(boi.port_b, senTSup.port_a);
+  connect(boi.port_b, volBoi.ports[1]);
+  connect(volBoi.ports[2], senTSup.port_a);
   connect(senTSup.port_b, byp.port_a);
   connect(byp.port_b, senTRet.port_a);
   connect(senTRet.port_b, pum.port_a);
@@ -177,7 +204,10 @@ equation
   for s in 1:nSta loop
     connect(yBalance[s], balRis[s].y);
     connect(senTSup.port_b, balRis[s].port_a);
-    connect(balRis[s].port_b, pipSup[1, s].port_a);
+    connect(balRis[s].port_b, volSup[s].ports[1]);
+    connect(volSup[s].ports[2], pipSup[1, s].port_a);
+    connect(volSup[s].heatPort, conRis[s].port_a);
+    connect(conRis[s].port_b, staWel.port);
     connect(pipRet[1, s].port_b, senTRet.port_a);
     for f in 1:nFlo - 1 loop
       connect(pipSup[f, s].port_b, pipSup[f + 1, s].port_a);

@@ -78,7 +78,10 @@ def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
     """
     fmu = BuildingFMU(fmu_path, parameters=parameters)
     exo0 = scenario(0.0)
-    act0 = {name: 0.5 for name in controllers}
+    # controllers may declare a sensible initial output (e.g. a supply-
+    # temperature controller starting hot instead of at valve mid-position)
+    act0 = {name: getattr(ctrl, "initial_output", 0.5)
+            for name, ctrl in controllers.items()}
     fmu.initialize({**exo0, **act0})
 
     records = []

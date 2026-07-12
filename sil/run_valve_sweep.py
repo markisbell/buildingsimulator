@@ -37,7 +37,7 @@ N_APT = len([v for v in md.modelVariables if re.fullmatch(r"TRoom\[\d+\]", v.nam
 
 # valve table from ApartmentBranch.mo, for reference overlay
 Y_CHA = [0, 0.03, 0.06, 0.10, 0.15, 0.22, 0.30, 0.45, 0.65, 1.0]
-PHI_CHA = [4e-4, 6e-4, 1.2e-3, 0.12, 0.35, 0.60, 0.78, 0.88, 0.94, 1.0]
+PHI_CHA = [1.5e-3, 2e-3, 3e-3, 0.12, 0.35, 0.60, 0.78, 0.88, 0.94, 1.0]
 
 RAMP = 6 * 3600.0  # seconds for one ramp direction
 
