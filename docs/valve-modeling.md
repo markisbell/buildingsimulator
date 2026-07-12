@@ -83,8 +83,17 @@ inside the range certified heads exhibit.
 | Presetting rings | not separate — `dpValve_nominal` sizing plays this role at design flow | — |
 | Δp force on closing point | not modeled (limitation) | — |
 
-Verification: `sil/run_valve_sweep.py` → `results/valve_sweep.png` (realized flow vs
-stroke incl. dead zone, saturation and authority distortion; device hysteresis loop).
+Verification: `sil/run_valve_sweep.py` (realized flow vs stroke incl. dead zone,
+saturation and authority distortion; device hysteresis loop):
+
+![Valve sweep: realized flow vs stroke and device hysteresis](figures/valve_sweep.png)
+
+*Fig. 1 — Left: quasi-static sweep of one TRV through the FMU. The realized flow
+(opening and closing coincide: the hydraulics carry no hysteresis) follows the Kv table
+with the valve-authority distortion; the shaded band is the sealing dead zone and the
+dotted line the RA-N anchor (81 % flow at the x<sub>p</sub> = 2 K lift, i.e. 30 % of the
+1.5 mm stroke). Right: the 0.1 mm motor–pin play produces the opening/closing
+hysteresis a control algorithm actually has to fight.*
 
 **Interaction found during verification:** switching from 1 % industrial-valve leakage
 to rubber-seal-tight 0.04 % changed the plant's night behavior qualitatively. With all
@@ -109,6 +118,13 @@ or forces, only its own encoder coordinate and this current signal.
 commercial eTRVs: drive closed, detect the current knee (seal contact) and the stall
 threshold, take the stall position as zero reference. Findings from the demo
 (`sil/run_adaptation_demo.py`, `results/adaptation_run.png`):
+
+![Adaptation run: current signature and zero-estimate statistics](figures/adaptation_run.png)
+
+*Fig. 2 — Left: motor current during one adaptation sweep with the firmware's knee and
+stall detections against the true pin events (seal contact, hard stop). Right: across
+60 simulated devices the zero-estimate error is a deterministic bias with negligible
+spread.*
 
 - The zero estimate carries a **systematic ≈ −80 µm bias** (backlash minus seal
   compression at the stall threshold) with only ~4 µm noise spread. The naive
