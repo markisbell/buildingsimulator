@@ -166,8 +166,10 @@ model Building80s
   Buildings.Fluid.Movers.SpeedControlled_y pum(
     redeclare package Medium = MediumW,
     addPowerToMedium=false,
+    energyDynamics=Modelica.Fluid.Types.Dynamics.SteadyState,
     per(pressure(V_flow={0, 0.5, 1.0, 1.5}*(m_flow_nominal_tot/1000),
-                 dp={1.5, 1.3, 1.0, 0.4}*dpDesign))) "Circulation pump";
+                 dp={1.5, 1.3, 1.0, 0.4}*dpDesign)))
+    "Circulation pump (steady-state volume: last unprotected water state)";
   Modelica.Blocks.Sources.Constant conPumY(k=1);
 
   Buildings.Fluid.HeatExchangers.Heater_T boi(

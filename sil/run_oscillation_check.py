@@ -14,6 +14,7 @@ Run inside the container:
 
 import json
 import math
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -39,6 +40,10 @@ WIN_AREA = {1: 4.6, 2: 2.8, 3: 1.8, 4: 0.8, 5: 4.6, 6: 2.8, 7: 1.8, 8: 0.8}
 ROOM_SHORT = ["living", "bed", "kitchen", "bath"]
 
 DUR = 2 * DAY
+# communication step configurable for discretization studies:
+#   python3 run_oscillation_check.py [control_dt_seconds]
+CONTROL_DT = float(sys.argv[1]) if len(sys.argv) > 1 else 30.0
+SUFFIX = "" if CONTROL_DT == 30.0 else f"-dt{CONTROL_DT:g}"
 
 
 def weather(t):
@@ -90,7 +95,7 @@ def main():
                + [f"dpVal[{k}]" for k in range(1, N_ZON + 1)]
                + ["TSup", "TRet", "QBoi", "PPum"])
 
-    writer = create_run("typical-day-80s-realistic", {
+    writer = create_run(f"typical-day-80s-realistic{SUFFIX}", {
         "durationDays": DUR / DAY,
         "building": {"floors": N_FLO, "apartmentsPerFloor": 8,
                      "model": "Building80s"},
@@ -106,10 +111,9 @@ def main():
                         "schedule": f"{T_SET[(k - 1) % 8]:g} °C const"}
                        for k in range(1, N_ZON + 1)],
     })
-    # 30 s communication step: bounds the internal solver's step across the
-    # discontinuous input changes (relay switching, sampled eTRV moves)
+    print(f"communication step: {CONTROL_DT:g} s")
     records = run_simulation(FMU, controllers, exogenous, duration=DUR,
-                             control_dt=30.0, output_names=outputs,
+                             control_dt=CONTROL_DT, output_names=outputs,
                              record_dt=60.0, on_record=writer.append)
     df = pd.DataFrame(records)
     writer.finish(kpis={"boilerKwh": round(kpi.boiler_energy_kwh(df), 1),
@@ -157,10 +161,10 @@ def main():
     axes[3].set_ylabel("burner / kW")
     axes[3].set_xlabel("time / h")
     fig.tight_layout()
-    fig.savefig(RESULTS / "oscillation_check_80s.png", dpi=150)
+    fig.savefig(RESULTS / f"oscillation_check_80s{SUFFIX}.png", dpi=150)
 
     print(f"\noscillation check {'PASSED' if ok else 'FAILED'} — "
-          f"plot in results/oscillation_check_80s.png")
+          f"plot in results/oscillation_check_80s{SUFFIX}.png")
 
 
 if __name__ == "__main__":
