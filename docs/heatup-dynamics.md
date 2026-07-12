@@ -19,8 +19,8 @@ Hydronic heat delivery is
 $$\dot Q = \dot m \, c_p \, (T_{sup} - T_{ret}),$$
 
 and $T_{ret}$ is a *free* variable set by the radiator's heat exchange with the room. In
-the decomposition run, flow is pinned at ≈ 255 l/h from 06:00 while radiator power falls
-from 5.4 kW to 3 kW — the water-side spread collapses as room and return warm up.
+the decomposition run, flow settles at ≈ 190-230 l/h from 06:00 while radiator power
+falls from ≈ 5.3 kW to 3.6 kW — the water-side spread collapses as room and return warm up.
 
 ![Heat-up decomposition: room temperature, radiator power and solar gain, water temperatures, flow](figures/heatup_decomposition.png)
 
@@ -100,14 +100,14 @@ The cooldown after setback shows the same two-node structure in reverse
 ![Evening cooldown: ideal PI vs realistic eTRV](figures/cooldown_analysis.png)
 
 *Fig. 3 — Room temperature and radiator power after the 22:00 setback. The ideal PI
-free-cools for ≈ 2.5 h before re-engaging at the night setpoint; the realistic eTRV
+free-cools for ≈ 3 h before re-engaging at the night setpoint; the realistic eTRV
 glides ≈ 1 K lower (sensor bias) with relay-style night cycling.*
 
 | Window after setback | Rate | Mechanism |
 |---|---|---|
-| first hour | see figure | **air-node fast phase**: with the valve shut, the fast node relaxes with $\tau \approx 41\,$min toward the still-warm mass; predicted sag ≈ $\frac{G_{win}}{G_{win}+G_{int}}(T_{mass}-T_{out}) \approx 1$ K below the mass node |
-| hours 2-3 | ≈ −0.3 K/h | transition: air slaved to the slowly cooling structure |
-| rest of night | ≈ −0.14 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power; pure structural cooling would be ≈ −0.5 K/h initially |
+| first hour | −1.8 K/h | **air-node fast phase**: with the valve shut, the fast node relaxes with $\tau \approx 41\,$min toward the still-warm mass; predicted sag ≈ $\frac{G_{win}}{G_{win}+G_{int}}(T_{mass}-T_{out}) \approx 1$ K below the mass node |
+| hours 2-3 | −0.58 K/h | transition: air slaved to the slowly cooling structure |
+| rest of night | −0.15 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power; pure structural cooling would be ≈ −0.5 K/h initially |
 
 The apparent "fast cooldown" is therefore the *air separating from the structure*, not
 the building losing its stored heat — the masonry cools an order of magnitude slower.

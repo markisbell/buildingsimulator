@@ -82,7 +82,8 @@ footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
   <h1>Verification report — 1980s German multi-family building simulator</h1>
   <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
   3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
-  repo commit <b>HEAD</b> · 2026-07-12 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K)</div>
+  repo commit <b>HEAD</b> · 2026-07-12 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
+  furnished-room fast node (C<sub>air</sub> = 40 kJ/m²K, τ<sub>fast</sub> ≈ 41 min)</div>
 </header>
 <p class="lede">Every verification claim, next to its graphical evidence. Each figure is the
 unmodified output of a reproducible script in <code>sil/</code>; the numbers in the tables
@@ -143,10 +144,10 @@ algorithms. Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
 <h2>Identical building, weather and solar; only the thermostat hardware differs</h2>
 <table>
 <tr><th>KPI (days 2–7)</th><th>Ideal PI</th><th>Realistic eTRV</th></tr>
-<tr><td>Discomfort</td><td class="num">592 K·h</td><td class="num">1000 K·h</td></tr>
-<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">77.4 K·h</td><td class="num">31.8 K·h</td></tr>
-<tr><td>Boiler energy</td><td class="num">1973 kWh</td><td class="num">1904 kWh</td></tr>
-<tr><td>Valve travel / moves</td><td class="num">85 strokes / 25 554</td><td class="num">788 strokes / 4 094</td></tr>
+<tr><td>Discomfort</td><td class="num">659 K·h</td><td class="num">1069 K·h</td></tr>
+<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">93.1 K·h</td><td class="num">43.0 K·h</td></tr>
+<tr><td>Boiler energy</td><td class="num">1965 kWh</td><td class="num">1897 kWh</td></tr>
+<tr><td>Valve travel / moves</td><td class="num">83 strokes / 23 070</td><td class="num">637 strokes / 3 574</td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_CMP@@" alt="Ideal vs realistic comparison">
 <figcaption>Top: the valve-mounted sensor’s warm bias keeps the real device ~1 K under setpoint.
@@ -178,10 +179,10 @@ Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json
 <h2>Cycling boiler, riser lag, stochastic gains, real eTRVs</h2>
 <table>
 <tr><th>Signature</th><th>Field-data range</th><th>Measured</th><th></th></tr>
-<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">88 / day</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.1 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.081 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.78</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">84 / day</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">18.9 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.029 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">0.70</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_OSC@@" alt="Oscillation traces">
 <figcaption>Day 2, 06–12 h: supply sawing on ~15-minute burner cycles; room temperatures dipping
@@ -223,7 +224,10 @@ relay-switched system, where any infinitesimal difference shifts switching insta
 statistics agree within a few percent. The 30 s grid is statistically converged; runs must be
 compared by KPIs and signatures, never trajectory-by-trajectory. The 10 s run additionally
 exposed the pump’s internal volume as the last unprotected water state (solver excursion at
-41 h); the pump now runs a steady-state energy balance like the radiators.</div>
+41 h); the pump now runs a steady-state energy balance like the radiators. This study was
+performed at the pre-ISO interior calibration (C<sub>air</sub> = 15 kJ/m²K) — the least-damped
+and therefore numerically hardest state; the current calibration (§6 numbers) adds zone damping,
+which relaxes rather than tightens the step-size requirement.</div>
 <figure><img src="data:image/png;base64,@@IMG_DT@@" alt="Communication step comparison">
 <figcaption>Day 2, 07–10 h: supply sawtooth and one radiator flow at both communication steps —
 identical amplitude, period and character; phases drift apart as expected.

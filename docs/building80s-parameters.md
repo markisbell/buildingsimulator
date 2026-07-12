@@ -153,13 +153,14 @@ Real measurement traces oscillate; the model now reproduces the mechanisms
 
 - **Two-point boiler** (`sil/boiler.py`, SIL supervisory logic through `TSupSet`):
   ±5 K hysteresis, 4-min minimum runtimes, 80 l boiler water mass → supply sawtooth
-  19 K pk-pk, 89 burner starts/day (~3.7/h, era-typical).
+  18.9 K pk-pk, 84 burner starts/day (~3.5/h, era-typical).
 - **Riser water columns** (6 l per stack base, shaft losses 6 W/K) → transport lag of
   the supply front.
 - **Stochastic internal gains** (`sil/gains.py`, seeded): occupancy blocks, cooking and
   bath bursts, appliance noise, 1-2 window-opening cold pulses per room and day
-  → room ripple 0.09 K (detrended std), radiator flow CV 0.79 with the eTRV
-  staircase/chatter pattern of field data.
+  → room ripple 0.03 K (detrended std; the C_air = 40 kJ/(m²K) fast node filters
+  gain noise strongly), radiator flow CV 0.70 with the eTRV staircase/chatter
+  pattern of field data.
 
 Numerical robustness at trickle flows required: forward-only flow in branches and
 risers, lumped stack-base volumes (mid-riser volumes destabilize), radiator
