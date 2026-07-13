@@ -206,7 +206,11 @@ chatter; burner duty blocks. Script: <code>run_oscillation_check.py</code>.</fig
 (8 l + 30 kg per kW, emission lag ≈ 30–50 min) since the field-realism revision. The A/B against
 the quasi-static build shows the field signatures appearing: boost overshoot (overheating +25 %
 ideal / +40 % eTRV), the first cooldown hour cushioned (−1.5 vs −1.8 K/h), slow eTRV
-charge/discharge night cycles (flow CV 0.80 → 1.07), longer burner cycles (83 → 73 starts/day).</div>
+charge/discharge night cycles (flow CV 0.80 → 1.07), longer burner cycles (83 → 73 starts/day).
+<br><em>Known limitation:</em> multi-hour free cooling still runs ≈ 2× faster than field overnight
+records (−0.79 vs ≈ −0.2…−0.4 K/h first hour) — the 2R2C zone lacks deep wall mass; warm-neighbor
+and initialization hypotheses were tested and eliminated (docs/heatup-dynamics.md §6). A calibrated
+third zone node is planned.</div>
 <figure><img src="data:image/png;base64,@@IMG_ABDYN@@" alt="Radiator dynamics A/B">
 <figcaption>Heat-up and cooldown, quasi-static (left) vs dynamic (right) radiators, identical
 scenario. Script: <code>compare_radiator_dynamics.py</code>.</figcaption></figure>

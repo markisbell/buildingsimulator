@@ -45,6 +45,15 @@ instead), moisture/latent loads, variable convection coefficients, furniture as 
 separate third node, solar distribution by geometry (fixed split), door opening/closing
 dynamics (constant $G_{door}$ = 15 W/K).
 
+**Documented borderline case — no deep wall mass:** $C_{mass}$ is the ISO
+*daily-effective* capacity; the layers of the masonry deeper than ~10 cm carry no
+state. Consequence, quantified against field records: multi-hour free cooling runs
+≈ 2× too fast (first hour −0.79 K/h vs measured ≈ −0.2…−0.4 K/h), while daily
+dynamics and steady states are calibrated. Initialization, synchronized-setback
+protocol and radiator storage were tested and eliminated as causes
+(heatup-dynamics.md §6, `sil/run_neighbor_test.py`). Planned resolution: a third
+(deep-mass) node calibrated to a measured overnight cooldown.
+
 ## 3. The radiator: EN 442 characteristic with water/steel storage
 
 - **Element-wise EN 442 law** $\dot Q_i \propto |\Delta T_i|^{1.24}$ over 5 elements —
@@ -107,7 +116,10 @@ quasi-static emission underestimates limit cycles.
 Each quasi-static simplification sits at least a factor ~3 below the next modeled
 scale. The former borderline case — the radiator emission lag — is a modeled state
 since the field-realism revision (§3); that the radiator and zone fast node share a
-time scale is physical, and exactly the interaction that makes TRV loops hard.
+time scale is physical, and exactly the interaction that makes TRV loops hard. The
+current documented gap sits at the *slow* end instead: the zone mass has no deep
+layer, so multi-hour free cooling runs ≈ 2× faster than field records (§2,
+heatup-dynamics.md §6).
 
 ## References
 

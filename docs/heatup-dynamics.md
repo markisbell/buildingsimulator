@@ -137,6 +137,59 @@ this analysis: the coupling raises the steady heat load to 65 W/m²
 $\tau_{fast} \approx 41$ min, inside the 0.5-2 h corridor that grey-box identification
 finds for furnished rooms.
 
+## 6. Open point: the absolute cooldown rate vs field records
+
+Field recordings in this building class show two signatures: setpoint **overshoot**
+after recovery (reproduced since the radiator storage exists,
+radiator-modeling.md §3) and **overnight cooling of only ≈ 0.2-0.4 K/h**. The model
+is not there yet on the second one. Current state, measured on the era-accurate
+Building80s under a clean protocol (`sil/run_neighbor_test.py`: 48 h verified
+warm-up at setpoint, 3 K setback of a mid-floor south living room, −5 °C, no sun,
+no gains, ideal PI):
+
+| Quantity | Model | Field |
+|---|---|---|
+| First-hour rate | **−0.79 K/h** (radiator storage already cushions; ≈ −1.2 without) | ≈ −0.2…−0.4 K/h |
+| 3 K setback consumed after | ≈ 5.5 h | typically not within a night |
+
+**Hypotheses tested and eliminated:**
+
+1. *Cold-started structure* — no: both zone nodes initialize at 20 °C and the
+   protocol verifies 20.00 °C / 1059 W at the setback instant after 48 h warm-up.
+2. *Synchronized whole-building setback vs the field's warm neighbors* — no: with
+   all neighbors held at 20.0 °C the 8-h cooldown changes by **0.04 K** (Fig. 4).
+   The slab/door couplings act between the slow mass nodes, which barely diverge
+   within a night. (Caveat: bulk-to-bulk conductances understate the multi-hour
+   feed of real concrete slabs somewhat — but not by a factor 2.)
+3. *Missing radiator storage* — resolved earlier; it is what already cushions the
+   first hour and creates the ±0.2 K / ≈ 1.5 h PI limit cycle at the night
+   setpoint visible in Fig. 4.
+
+![Single-room vs whole-building setback](figures/neighbor_test_80s.png)
+
+*Fig. 4 — Whole-building vs single-room setback: the test-room trajectories are
+practically identical; bottom: the neighbors hold 20.0 °C while the test room falls.*
+
+**Why the room can only be as slow as the mass node:** after the fast phase the air
+hangs $G_{win}/(G_{win}+G_{int}) \approx 4$-$7\,\%$ of $(T_{mass}-T_{out})$ — i.e.
+1-1.6 K — below the mass node and then tracks it. The relevant time constants
+(80s living room): air relaxation 41 min; **mass→room discharge**
+$C_{mass}/G_{int} \approx$ **4.7 h** (not the bottleneck); passive structure
+cooling $(C_{air}+C_{mass})/(G_{win}+G_{wall}) \approx$ **48 h** → initial rate
+$\approx 25\,\mathrm{K}/48\,\mathrm{h} \approx 0.5$ K/h, plus the fast-phase sag.
+Field-observed rates imply an effective τ of 80-150 h.
+
+**Surviving explanation — the 2R2C truncation has no deep wall mass:**
+$C_{mass} = 260$ kJ/(m²K) is the ISO 13790 *daily-effective* capacity, and a lumped
+node exposes its bulk temperature at the surface. A real 36.5 cm masonry wall
+re-feeds its inner surface from the layers behind it (heat penetrates
+$\sqrt{a t} \approx 14$ cm of masonry in 8 h) — a semi-infinite response that any
+single lump underestimates in the first hours. Planned fix: a third node
+(≈ 300-400 kJ/(m²K) deep mass behind a few W/(m²K)), with the conductance
+calibrated against a measured overnight cooldown; secondary levers: ISO
+"very heavy" class (370 kJ/(m²K), defensible for masonry + concrete ceilings) and
+calm-night infiltration (n ≈ 0.4-0.5 h⁻¹ instead of the 0.7 era average).
+
 ## References
 
 - P.R. Armstrong, C.E. Hancock, J.E. Seem: *Commercial Building Temperature Recovery —
