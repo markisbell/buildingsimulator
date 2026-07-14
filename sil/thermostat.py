@@ -181,9 +181,15 @@ class ElectronicThermostat:
             self.sensor_log.append((t, measurements[self.temp_output], T_sensed))
             command = self.algorithm.step(t, T_sensed)
             # reposition only if worth the battery (or hitting an end stop)
-            if (abs(command - self._position) >= self.position_deadband
-                    or (command in (0.0, 1.0) and command != self._position)):
+            if self._worth_moving(t, command):
                 self.n_moves += 1
                 self._position = command
                 return self.actuator.command_opening(command, dp_pa=dp)
         return self.actuator.pin_fraction()
+
+    def _worth_moving(self, t, command):
+        """Battery policy: is this reposition worth a motor move? Stock
+        firmware: fixed deadband, end stops always honored. Strategies
+        (sil/strategies.py) override this."""
+        return (abs(command - self._position) >= self.position_deadband
+                or (command in (0.0, 1.0) and command != self._position))

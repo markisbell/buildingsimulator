@@ -95,6 +95,10 @@ class BiasCompensatingThermostat(ElectronicThermostat):
 
         T_comp = T_sensed - self.k_hat * self._u_filt
         self.comp_log.append((t, T_sensed, T_comp, self._u_filt))
+        # signed control error at this sample (used by battery policies)
+        inner = self.algorithm.inner
+        if hasattr(inner, "setpoint"):
+            self.last_error_K = inner.setpoint(t) - T_comp
         return T_comp
 
     # -- night-anchor learning ---------------------------------------------
@@ -131,3 +135,117 @@ class BiasCompensatingThermostat(ElectronicThermostat):
             self.k_hat = min(max(self.k_hat, 0.0), self.comp_k_max)
         self.k_log.append((t, self.k_hat))
         self._anchor = None           # one update per closure
+
+
+class BatteryAwareThermostat(BiasCompensatingThermostat):
+    """Strategy 2 — battery-aware limit-cycle suppression, stacked on the
+    bias compensation.
+
+    Two firmware-only policies against the night/low-demand cycling that
+    burns valve travel (the dominant battery cost):
+
+    1. Comfort-scaled deadband: near setpoint (|e| <= near_band_K) a
+       reposition must be worth `deadband_near` of stroke (vs the stock
+       0.05); far from setpoint the stock fine deadband applies, so
+       recovery control stays crisp. Near setpoint, fine positioning is
+       futile anyway: the quick-opening insert squeezes all resolution
+       into ~0.5 mm of travel and the radiator storage low-passes the
+       result.
+    2. Reopen dwell (anti-short-cycle, like the burner relay): after
+       closing, do not reopen within `reopen_dwell_s` unless the room is
+       genuinely cold (e > reopen_override_K) — the radiator's stored
+       heat is still arriving during that window.
+    """
+
+    def __init__(self, *args, deadband_near=0.15, near_band_K=0.5,
+                 reopen_dwell_s=900.0, reopen_override_K=0.5, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.deadband_near = deadband_near
+        self.near_band_K = near_band_K
+        self.reopen_dwell_s = reopen_dwell_s
+        self.reopen_override_K = reopen_override_K
+        self._closed_at = None
+        self.last_error_K = 0.0
+
+    def _worth_moving(self, t, command):
+        e = self.last_error_K
+        # anti-short-cycle: freshly closed and not genuinely cold -> stay
+        if (self._position == 0.0 and command > 0.0
+                and self._closed_at is not None
+                and t - self._closed_at < self.reopen_dwell_s
+                and e < self.reopen_override_K):
+            return False
+        deadband = (self.deadband_near if abs(e) <= self.near_band_K
+                    else self.position_deadband)
+        move = (abs(command - self._position) >= deadband
+                or (command in (0.0, 1.0) and command != self._position))
+        if move and command == 0.0:
+            self._closed_at = t
+        return move
+
+
+class OptimalStartThermostat(BatteryAwareThermostat):
+    """Strategy 3 — per-room adaptive optimal start, stacked on 1 + 2.
+
+    The stock device reacts to the morning setpoint step at day start and
+    arrives 1-2 h late (multi-time-constant recovery,
+    docs/heatup-dynamics.md). This firmware advances its own setpoint step
+    by a learned lead time and adapts it from each morning's measured
+    arrival:
+
+        lead <- clamp(lead + beta * (t_arrival - t_daystart), 0, lead_max)
+
+    Arrival is detected on the device's own compensated temperature
+    (crossing day_sp - arrival_margin). The central Schnellaufheizung and
+    building dynamics are unknown to the device — whatever they do is
+    absorbed into the learned lead.
+
+    Construction differs from the other strategies: the device must own
+    its setpoint schedule, so it takes the schedule tuple
+    (day_sp, night_sp, day_start_h, day_end_h) and an algorithm factory.
+    """
+
+    def __init__(self, *args, schedule=None,
+                 algorithm_factory=None,
+                 lead_init_s=1800.0, lead_max_s=10800.0, lead_beta=0.5,
+                 arrival_margin_K=0.2, **kwargs):
+        if schedule is None or algorithm_factory is None:
+            raise ValueError("schedule and algorithm_factory are required")
+        self.day_sp_K = schedule[0] + 273.15
+        self.night_sp_K = schedule[1] + 273.15
+        self.day_start_h, self.day_end_h = schedule[2], schedule[3]
+        self.lead_s = lead_init_s
+        self.lead_max_s = lead_max_s
+        self.lead_beta = lead_beta
+        self.arrival_margin_K = arrival_margin_K
+        self.lead_log = []            # (t, lead_s) after each morning
+        self._arrival_day = -1        # last day with a recorded arrival
+
+        super().__init__(*args, algorithm=algorithm_factory(self._setpoint),
+                         **kwargs)
+
+    def _setpoint(self, t):
+        hour = (t % 86400.0) / 3600.0
+        start_eff_h = self.day_start_h - self.lead_s / 3600.0
+        return (self.day_sp_K if start_eff_h <= hour < self.day_end_h
+                else self.night_sp_K)
+
+    def _compensate(self, t, T_sensed):
+        T_comp = super()._compensate(t, T_sensed)
+        # morning arrival detection -> lead-time learning, once per day
+        day = int(t // 86400.0)
+        hour = (t % 86400.0) / 3600.0
+        # accept arrivals only around the morning recovery itself — a solar
+        # afternoon crossing must not be mistaken for a (very late) arrival
+        in_morning = (self.day_start_h - self.lead_max_s / 3600.0 - 0.5
+                      <= hour
+                      < min(self.day_end_h, self.day_start_h + 4.0))
+        if (day != self._arrival_day and in_morning
+                and T_comp >= self.day_sp_K - self.arrival_margin_K):
+            self._arrival_day = day
+            t_target = day * 86400.0 + self.day_start_h * 3600.0
+            err = min(t - t_target, 7200.0)   # bounded: late -> more lead
+            self.lead_s = min(max(self.lead_s + self.lead_beta * err, 0.0),
+                              self.lead_max_s)
+            self.lead_log.append((t, self.lead_s))
+        return T_comp
