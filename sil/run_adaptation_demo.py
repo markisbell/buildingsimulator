@@ -1,7 +1,9 @@
-"""Adaptation run demo — motor-current-based identification of the seal.
+"""Adaptation run demo — motor-current-based zero referencing.
 
-Panel 1: current trace of one adaptation sweep with the firmware's knee and
-         stall detections against the true seal contact and hard stop.
+Panel 1: current trace of one adaptation sweep with the firmware's stall
+         detection against the true seal contact and hard stop (the seal
+         force is visible in the trace as plant physics; the firmware only
+         uses the stall).
 Panel 2: zero-estimation error across a population of devices (different
          noise seeds and mounting tolerances) — the residual calibration
          uncertainty an adaptive control strategy has to live with.
@@ -37,9 +39,6 @@ def main():
     print(f"true zero:      {act.true_zero_mm:.3f} mm (motor coordinate)")
     print(f"estimated zero: {act.zero_est_mm:.3f} mm "
           f"-> error {info['zero_error_mm']*1000:+.0f} um")
-    print(f"knee detected:  {info['knee_mm']:.3f} mm, "
-          f"seal thickness estimate {info['seal_est_mm']*1000:.0f} um "
-          f"(true seal zone: {act.seal_zone_mm*1000:.0f} um)")
     print(f"sweep duration: {info['duration_s']:.0f} s, "
           f"travel {act.travel_mm:.2f} mm")
 
@@ -56,9 +55,6 @@ def main():
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5))
 
     ax1.plot(trace[:, 0], trace[:, 1], lw=1.0)
-    ax1.axhline(info["baseline_ma"], lw=0.7, color="gray", ls="--")
-    ax1.annotate("baseline", xy=(trace[0, 0], info["baseline_ma"] + 1),
-                 fontsize=8, ha="right")
     # during closing the pin lags the motor by the play width, so pin events
     # appear shifted by -backlash on the motor axis
     lag = act.backlash_mm
@@ -66,14 +62,12 @@ def main():
                 lw=0.9, ls=":", label="true seal contact (pin)")
     ax1.axvline(act.true_zero_mm - lag, color="#e34948", lw=0.9, ls=":",
                 label="true hard stop (pin)")
-    ax1.plot(info["knee_mm"], dict(trace)[info["knee_mm"]], "o", ms=6,
-             mfc="none", label="knee detected")
     ax1.plot(info["stall_mm"], trace[-1, 1], "s", ms=6, mfc="none",
              label="stall -> zero ref")
     ax1.invert_xaxis()  # motor travels toward smaller coordinates
     ax1.set_xlabel("motor position / mm (closing ->)")
     ax1.set_ylabel("measured motor current / mA")
-    ax1.set_title("Adaptation sweep: current signature of the seal")
+    ax1.set_title("Adaptation sweep: stall-based zero referencing")
     ax1.legend(fontsize=8, loc="upper left")
 
     ax2.hist(errors, bins=15, edgecolor="white")

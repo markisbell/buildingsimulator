@@ -127,23 +127,25 @@ k · pin force, with noise and ADC quantization; the firmware never sees true po
 or forces, only its own encoder coordinate and this current signal.
 
 `ElectronicThermostat.adaptation_run()` implements the commissioning routine of
-commercial eTRVs: drive closed, detect the current knee (seal contact) and the stall
-threshold, take the stall position as zero reference. Findings from the demo
+commercial eTRVs: drive closed until the motor current hits the stall threshold and
+take the stall position as zero reference. (An earlier firmware revision also
+detected the seal-contact knee in the current trace and estimated the seal-zone
+thickness; that detection was removed — the seal *force* remains fully modeled in
+the actuator and visible in the trace, but no control logic ever consumed the
+estimate.) Findings from the demo
 (`sil/run_adaptation_demo.py`, `results/adaptation_run.png`):
 
 ![Adaptation run: current signature and zero-estimate statistics](figures/adaptation_run.png)
 
-*Fig. 2 — Left: motor current during one adaptation sweep with the firmware's knee and
-stall detections against the true pin events (seal contact, hard stop). Right: across
-60 simulated devices the zero-estimate error is a deterministic bias with negligible
-spread.*
+*Fig. 2 — Left: motor current during one adaptation sweep with the firmware's stall
+detection against the true pin events (seal contact, hard stop — the seal-force rise
+is plant physics in the trace). Right: across 60 simulated devices the zero-estimate
+error is a deterministic bias with negligible spread.*
 
 - The zero estimate carries a **systematic ≈ −80 µm bias** (backlash minus seal
   compression at the stall threshold) with only ~4 µm noise spread. The naive
   "stall = zero" firmware convention therefore biases all commanded openings ~5 % of
   stroke low — a repeatable, identifiable error: a target for adaptive strategies.
-- The knee-to-stall distance underestimates the true seal zone (40 µm vs 90 µm) due to
-  conservative knee detection — same story.
 - Each adaptation run costs ~1.9 mm valve travel (battery KPI) and ~75 s with the
   valve closed.
 

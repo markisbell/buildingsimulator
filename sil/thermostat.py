@@ -18,10 +18,10 @@ valve thermostat (Danfoss Ally / eQ-3 / Homematic class devices):
                        measurement (force through spring, seal contact and
                        friction, with noise and ADC quantization)
 - adaptation run       on first activation (auto_adapt) the firmware drives
-                       the valve closed, watches the current trace for the
-                       seal-contact knee and the stall threshold, and takes
-                       the stall position as its zero reference - exactly
-                       like commercial eTRVs after mounting
+                       the valve closed until the motor current hits the
+                       stall threshold and takes the stall position as its
+                       zero reference - exactly like commercial eTRVs after
+                       mounting
 - travel accounting    total valve travel and move count are recorded as
                        battery-consumption KPIs
 
@@ -80,7 +80,6 @@ class ElectronicThermostat:
                  sensor_noise_std=0.05,    # K
                  auto_adapt=True,          # adaptation run on first activation
                  stall_ma=45.0,            # firmware stall-detection threshold
-                 knee_delta_ma=8.0,        # firmware knee detection above baseline
                  actuator=None,            # ValveActuator (default one is created)
                  seed=0):
         self.temp_output = temp_output
@@ -96,7 +95,6 @@ class ElectronicThermostat:
         self.sensor_noise_std = sensor_noise_std
         self.auto_adapt = auto_adapt
         self.stall_ma = stall_ma
-        self.knee_delta_ma = knee_delta_ma
         self.actuator = actuator or ValveActuator(seed=seed + 1000)
         self._rng = np.random.default_rng(seed)
 
@@ -126,17 +124,7 @@ class ElectronicThermostat:
         the zero reference — the commissioning routine of commercial eTRVs."""
         act = self.actuator
         trace, duration = act.close_until_stall(stall_ma=self.stall_ma, dp_pa=dp_pa)
-        currents = [i for _, i in trace]
         positions = [p for p, _ in trace]
-        n_base = max(3, len(trace) // 4)
-        baseline = float(np.median(currents[:n_base]))
-        knee_mm = None
-        run = 0
-        for pos, i in trace:
-            run = run + 1 if i > baseline + self.knee_delta_ma else 0
-            if run >= 3:
-                knee_mm = pos
-                break
         act.zero_est_mm = positions[-1]  # firmware zero := stall position
         self._position = 0.0
         self._adapt_until = t + duration
@@ -144,11 +132,8 @@ class ElectronicThermostat:
         self.adaptation = {
             "t": t,
             "duration_s": duration,
-            "baseline_ma": baseline,
-            "knee_mm": knee_mm,
             "stall_mm": positions[-1],
             "zero_error_mm": act.zero_est_mm - act.true_zero_mm,
-            "seal_est_mm": (knee_mm - positions[-1]) if knee_mm else None,
             "trace": trace,
         }
         return self.adaptation

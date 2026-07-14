@@ -147,17 +147,17 @@ records.</figcaption></figure>
 
 <section>
 <div class="eyebrow">3 · eTRV device — motor current &amp; adaptation</div>
-<h2>Seal detection from the current signature</h2>
+<h2>Zero referencing from the current signature</h2>
 <table>
 <tr><th>Quantity</th><th>True value</th><th>Firmware estimate</th><th></th></tr>
 <tr><td>Mechanical zero (population n = 60)</td><td class="num">—</td><td class="num">−78 µm bias, 4 µm spread</td><td><span class="pass">systematic → compensable</span></td></tr>
-<tr><td>Seal zone thickness</td><td class="num">90 µm</td><td class="num">40 µm (conservative knee)</td><td></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_ADAPT@@" alt="Adaptation run">
-<figcaption>Left: one adaptation sweep — motor current vs position with the firmware’s detected
-knee (seal contact) and stall (zero reference) against the true pin events. Right: the error is a
-deterministic bias, not noise — the defining property that makes it identifiable by better
-algorithms. Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
+<figcaption>Left: one adaptation sweep — motor current vs position with the firmware’s stall
+detection (zero reference) against the true pin events; the seal-force rise before the hard stop
+is plant physics in the trace, not a firmware feature. Right: the error is a deterministic bias,
+not noise — the defining property that makes it identifiable by better algorithms.
+Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
 </section>
 
 <section>

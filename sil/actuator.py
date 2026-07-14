@@ -16,7 +16,7 @@ Pin force model (quasi-static, closing direction positive)
 -----------------------------------------------------------
 - return spring: preload + rate * compression (insert spring pushes pin out)
 - seal contact: steep elastomer stiffness once the plug enters the seal zone
-  (pin below seal_zone_mm); this is what the current knee detects
+  (pin below seal_zone_mm); visible in the current trace as plant physics
 - Coulomb friction
 - hydraulic force: dp across valve * seat area — order 0.1-1 N, far below
   the seal force, i.e. realistically invisible in the current signal

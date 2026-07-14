@@ -92,7 +92,6 @@ def compute_kpis(df, controllers, schedules, duration):
             a = th.adaptation or {}
             devices[str(i)] = {
                 "zeroErrorUm": round(a.get("zero_error_mm", 0) * 1000),
-                "sealEstUm": round((a.get("seal_est_mm") or 0) * 1000),
                 "travelMm": round(th.travel_mm, 1),
                 "moves": th.n_moves,
                 "adaptationAgeDays": round((duration - a.get("t", 0)) / DAY, 1),
