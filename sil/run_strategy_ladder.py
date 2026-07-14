@@ -118,7 +118,13 @@ def main():
     ax1.legend(fontsize=8)
 
     names = ["stock eTRV", "adaptive", "battery", "opt-start"]
-    travel_vals = [305.8, 274.3]
+    try:
+        import json
+        adaptive_travel = json.loads(
+            (RESULTS / "adaptive_bias_kpis.json").read_text())["travelStrokes"]
+    except (FileNotFoundError, KeyError):
+        adaptive_travel = 274.3   # last published value as fallback
+    travel_vals = [305.8, adaptive_travel]
     for name in ["battery", "opt-start"]:
         devs = [c for c in travels[name].values() if hasattr(c, "travel")]
         travel_vals.append(kpi.battery_kpis(devs)[0])

@@ -180,11 +180,16 @@ class BiasCompensatingThermostat(ElectronicThermostat):
             # physical bound: the storage decay tau_b stays well under
             # ~1.6 h, so rho <= 0.6 — also caps noise amplification
             rho = min(max(g2 / g1, 0.05), 0.60)
-            b_at_start = g1 / (1.0 - rho) ** 2
-            # back-extrapolate over the skipped flat top with the measured
-            # decay itself (bounded: the flat top decays slower than exp)
-            tau_b = -(T2 / 3) / math.log(rho)
-            b0 = min(b_at_start * min(math.exp(skip / tau_b), 2.0), 3.0)
+            b0 = min(g1 / (1.0 - rho) ** 2, 3.0)
+            # DELIBERATELY NO back-extrapolation over the skipped flat top:
+            # the zone fast node relaxes with tau ~ 41 min — spectrally
+            # indistinguishable from the bias decay inside a closure — so
+            # the estimator inevitably books some of the room's own sag
+            # curvature as bias. Amplifying that (exp(skip/tau_b) factor)
+            # drove every k_hat into the clamp and the rooms ~1 K ABOVE
+            # setpoint on the generic building (ladder re-evaluation).
+            # The at-skip estimate under-corrects by ~30 % by design:
+            # a residual 0.3-0.4 K below setpoint is the safe failure mode.
         k_obs = min(max(b0, 0.0) / max(a["u0"], 0.15), self.comp_k_max)
         self.anchor_debug.append(
             {"t_h": samples[-1][0] / 3600, "T_h": T / 3600,

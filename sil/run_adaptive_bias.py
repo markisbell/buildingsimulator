@@ -87,6 +87,9 @@ def main():
     travel, moves = kpi.battery_kpis(devices)
     print(f"{'valve travel (strokes) / moves':42s} {'—':>10s} "
           f"{'305.8/3108':>11s} {travel:6.1f}/{moves}")
+    import json
+    (RESULTS / "adaptive_bias_kpis.json").write_text(json.dumps(
+        {"travelStrokes": round(travel, 1), "moves": int(moves)}))
     for d in devices:
         i = d.temp_output
         ks = ", ".join(f"{k:.2f}" for _, k in d.k_log)

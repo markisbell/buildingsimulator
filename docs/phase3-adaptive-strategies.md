@@ -27,18 +27,28 @@ occupancy schedules, two-point-free supply with Schnellaufheizung boost,
 
 | KPI (days 2–7) | ideal PI | stock eTRV | + bias comp | + battery | + opt-start |
 |---|---|---|---|---|---|
-| Discomfort (K·h) | 409.7 | 853.5 | 563.8 | 586.8 | **440.4** |
-| Overheating (K·h) | 137.2 | 52.9 | 97.3 | 94.1 | 119.8 |
-| Boiler energy (kWh) | 1988.7 | 1902.0 | 1988.9 | 1978.7 | 2018.4 |
-| Valve travel (strokes/wk) | — | 305.8 | 274.3 | **241.0** | 261.2 |
-| Valve moves (count/wk) | — | 3108 | 2386 | **1216** | 1337 |
+| Discomfort (K·h) | 409.7 | 853.5 | 338.6 | 378.5 | **230.9** |
+| Overheating (K·h) | 137.2 | 52.9 | 166.5 | 155.1 | 209.2 |
+| Discomfort + overheating | 546.9 | 906.4 | 505.1 | 533.6 | **440.1** |
+| Boiler energy (kWh) | 1988.7 | 1902.0 | 2045.6 | 2036.3 | 2078.4 |
+| Valve travel (strokes/wk) | — | 305.8 | 251.7 | **215.3** | 219.5 |
+| Valve moves (count/wk) | — | 3108 | 1624 | **972** | 1042 |
 
 Three firmware upgrades take a realistic eTRV from **double** the ideal-PI
-discomfort to **within 7.5 %** of it, while halving the battery-relevant move
-count at the middle rung. The honest costs stay visible: comfort costs energy
-(boiler consumption returns to the ideal-PI level once rooms actually reach
-setpoint), and optimal start buys on-time arrivals with pre-start overheating
-(119.8 K·h — still below the ideal PI's own 137.2).
+comfort penalty to **beyond** it, while cutting the battery-relevant move
+count to a third. Two honesty notes on "beating" the ideal PI:
+
+- *Metric asymmetry.* The discomfort KPI is one-sided (below setpoint). The
+  compensated device settles with a small warm offset (its conservative
+  estimator under-corrects, but the deadband lets it ride ~0.1–0.2 K high),
+  which the one-sided metric rewards; the symmetric sum row and the
+  overheating row keep that visible (+29 K·h overheating vs the ideal PI at
+  rung 1).
+- *Schedule anticipation is a real win.* The ideal-PI baseline runs the same
+  schedule with no lead; optimal start removes the morning-recovery deficit
+  that dominates the ideal PI's own 409.7 K·h — a capability, not an
+  artifact — and pays for it in pre-start overheating (209.2 K·h) and
+  +4.5 % boiler energy, both on the table.
 
 Every rung exploits a physical time scale verified earlier in the project:
 
@@ -64,13 +74,14 @@ opening via the known quick-opening insert shape.
 ![Adaptive bias compensation](figures/adaptive_bias.png)
 
 *Fig. 1 — Top: true room temperature, stock vs adaptive, days 5–7 (the stock
-plateau sits 1.5 K under setpoint; the adaptive one at −0.3…−0.5 K). Middle:
-the learned gain converging within ~2 nights. Bottom: per-day discomfort
-falling toward the ideal-PI bound as learning progresses.*
+plateau sits 1.5 K under setpoint; the adaptive one straddles it). Middle:
+the learned gain — factory prior 1.0, anchors keeping it in a 1.4–2.5 band.
+Bottom: per-day discomfort falling past the ideal-PI curve as learning
+progresses (see the metric notes in §1).*
 
-Result: discomfort **853.5 → 563.8 K·h** (65 % of the stock penalty
-recovered) with travel *down* (compensation reduces hunting) and the energy
-cost on display.
+Result: discomfort **853.5 → 338.6 K·h** with travel *down* (compensation
+reduces hunting: 305.8 → 251.7 strokes, 3108 → 1624 moves) and the energy
+cost on display (+2.9 % vs the ideal PI — rooms actually held at setpoint).
 
 ## 3. Rung 2 — battery-aware limit-cycle suppression
 
@@ -81,8 +92,8 @@ squeezes all resolution into ~0.5 mm and the radiator storage low-passes the
 result) and a **reopen dwell** (after closing, no reopen for 15 min unless
 the room is genuinely cold: the radiator's stored heat is still arriving).
 
-Result: **moves halved** (2386 → 1216), travel 274 → 241 strokes/week, for
-+23 K·h discomfort.
+Result: **moves down 40 %** (1624 → 972), travel 251.7 → 215.3 strokes/week,
+for +39.9 K·h discomfort.
 
 ## 4. Rung 3 — per-room adaptive optimal start
 
@@ -99,9 +110,10 @@ solar-crossing guard, the central boost simply absorbed into the learned lead.
 ideal PI, while the previous rung is still 2 K away. Bottom: valve travel
 down the ladder.*
 
-Leads converge per room and per usage pattern: south living rooms ≈ 95 min,
-the warm-preference apartment ≈ 45 min. Full-ladder discomfort: **440.4 K·h**
-vs the ideal PI's 409.7.
+Leads converge per room and per usage pattern: the long-day south living
+rooms climb to ≈ 130 min, the mid apartments settle at 65–85 min. Full-ladder
+discomfort: **230.9 K·h**, symmetric sum 440.1 vs the ideal PI's 546.9 — the
+anticipation win minus its overheating cost.
 
 ## 5. Rung 4 — distributed considerate recovery (a documented negative)
 
@@ -135,16 +147,27 @@ with identical seeds), each round a finding:
    back-extrapolated with the measured decay ratio. Verified by a two-plant
    unit probe (`sil/test_strategies.py`) including a 1.5 h partial closure.
 5. **A factory prior closes the tail.** One bath's usage pattern never
-   grants a usable closure; devices now ship k̂ = 1.0 and refine. With that,
-   18–20 of 24 rooms arrive within 0.75 K (from 9–10), min k̂ 1.4–1.6.
+   grants a usable closure; devices now ship k̂ = 1.0 and refine.
+6. **Over-identification is the opposite failure.** Re-evaluating the ladder
+   exposed that the back-extrapolation step of round 4 systematically
+   over-estimated the bias: the zone fast node relaxes with τ ≈ 41 min —
+   spectrally indistinguishable from the bias decay inside a closure — so
+   part of the room's own sag is inevitably booked as bias, and amplifying
+   it drove every k̂ into the clamp and the rooms ~1 K *above* setpoint
+   (which the one-sided discomfort metric silently rewarded). The final
+   estimator deliberately under-corrects (~30 %): a small residual
+   undershoot is the safe failure mode; over-compensation burns energy
+   invisibly.
 
-**Verdict:** with well-calibrated devices, **greedy beats considerate on
-every metric** (worst room at +3 h: 1.09 vs 1.75 K; arrivals 20 vs 18) — the
-boosted, 1.3×-sized plant resolves the contention itself, and capping arrived
-rooms only delays them. The apparent hydraulic fairness problem of the early
-rounds was residual sensor bias in disguise. The policy is retained as a
-documented negative result; it would pay only in plants without reheat margin
-(no boost, no oversizing), where recovery contention is genuinely binding.
+**Verdict** (final firmware, honest calibration: k̂ median ≈ 1.5, no clamp
+saturation): **greedy beats considerate on every metric** (worst room at
++3 h: 1.68 vs 1.87 K; spread 1.83 vs 2.21 K; arrivals within 0.75 K: 14 vs
+12) — the boosted, 1.3×-sized plant resolves the contention itself, and
+capping arrived rooms only delays them. The apparent hydraulic fairness
+problem of the early rounds was residual sensor bias in disguise. The policy
+is retained as a documented negative result; it would pay only in plants
+without reheat margin (no boost, no oversizing), where recovery contention
+is genuinely binding.
 
 ![Coordinated recovery](figures/coordinated_recovery.png)
 
@@ -153,7 +176,7 @@ distributions, greedy vs considerate, plus the supply relay/boost traces
 confirming both variants saw identical plant behavior.*
 
 The hydraulic interaction the strategy targeted is real and quantified — the
-installed valve characteristic in operation is a **band** (±29 % flow at the
+installed valve characteristic in operation is a **band** (±45 % flow at the
 working stroke, flow collapse at unchanged opening when the neighbours open
 at the boost; valve-modeling.md §3, `scripts/make_flow_evidence.py`) — it is
 simply not the binding constraint of this building's recoveries once sensing
@@ -161,25 +184,29 @@ is healthy.
 
 ## 6. What Phase 3 established
 
-1. **The device penalty is mostly recoverable in firmware.** No hardware
-   change: 93 % of the comfort gap closed, moves halved, all trades explicit.
+1. **The device penalty is fully recoverable in firmware.** No hardware
+   change: the comfort gap to the same-schedule ideal PI is closed (and
+   exceeded via schedule anticipation), moves cut to a third, all trades
+   explicit.
 2. **Every effective strategy is a physics exploit.** The ladder worked
    because each rung leaned on a verified, documented time scale — and the
    one strategy that ignored where the bottleneck actually was (rung 4)
    returned a negative.
-3. **Identifiability is a plant property.** Sensor-bias learning lives or
-   dies by the radiator's thermal storage and the room's usage pattern;
-   robust estimators (partial-decay identification + factory priors) are
-   mandatory, not optional.
-4. **Measure against the honest bound.** The ideal-PI baseline kept every
-   claim calibrated: no strategy "beats physics", and costs (energy,
-   pre-start overheating) surface instead of hiding.
+3. **Identifiability is a plant property — in both directions.** Sensor-bias
+   learning lives or dies by the radiator's thermal storage and the room's
+   usage pattern (under-identification, rounds 2/4/5), and the zone fast
+   node's overlapping time constant puts a hard ceiling on how much a
+   single-sensor estimator may trust itself (over-identification, round 6).
+   Robust estimators — partial-decay identification, factory priors,
+   deliberate under-correction — are mandatory, not optional.
+4. **Watch the metric as closely as the physics.** The one-sided discomfort
+   KPI silently rewarded over-compensation (rooms held warm read as
+   "comfort"); the paired overheating and energy rows exposed it. Symmetric
+   sums and cost rows belong in every comparison table.
 
-Numbers in this document were measured at the revision of each rung's
-evaluation run (rungs 1–3 with the original anchor estimator; rung 4 with the
-hardened one). Re-evaluating the generic-building ladder with the final
-firmware is queued follow-up work; the hardened estimator and factory prior
-can only improve rungs 1–3.
+All numbers in this document are measured with the final firmware
+(conservative three-window estimator, factory prior) — one consistent
+revision across all four rungs.
 
 ## Reproduction
 

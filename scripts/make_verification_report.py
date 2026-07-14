@@ -134,7 +134,7 @@ because the branch shares its differential pressure with 23 other valves through
 At the 06:00 boost the flow through this branch collapses at unchanged opening — the neighbours
 open and take its differential pressure; the same interaction runs in reverse as they close.
 At the working stroke the P5–P95 flow
-band spans ±29 % around its mid (16.8–30.8 l/h at y = 0.13–0.17). Full-open median flow matches
+band spans ±45 % around its mid (15.6–41.3 l/h at y = 0.13–0.17). Full-open median flow matches
 the design flow of the branch (74.9 l/h), closing the loop between valve table, ring presetting
 and network sizing.</div>
 <figure><img src="data:image/png;base64,@@IMG_FLOWOP@@" alt="Opening vs flow in operation">

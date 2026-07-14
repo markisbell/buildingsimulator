@@ -99,7 +99,7 @@ hysteresis a control algorithm actually has to fight.*
 `sil/run_coordinated_recovery.py`): in the running 24-room building the installed
 characteristic is a *band*, not a curve — the same opening delivers different flows
 depending on the state of the other 23 valves (shared riser differential pressure;
-±29 % P5–P95 at the working stroke). At the 06:00 boost the flow through a
+±45 % P5–P95 at the working stroke). At the 06:00 boost the flow through a
 near-fully-open valve collapses at unchanged opening as the neighbours open and
 take its head. The full-open median flow reproduces the branch design flow
 (74.9 l/h), closing the loop between the Kv table, ring presetting and network
