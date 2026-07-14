@@ -160,5 +160,9 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 5. ✅ Manual valves (presetting rings + riser balancing as FMU inputs) with a damped
    proportional balancing routine — as-built / open / balanced baseline states
    ([details](docs/building80s-parameters.md))
-6. Gymnasium multi-agent interface; experiments: adaptive + distributed control; benchmarking against
+6. ✅ Adaptive + distributed control strategies: cumulative firmware ladder (bias compensation,
+   battery policies, optimal start) closing 93 % of the device comfort penalty, plus a
+   documented negative result on distributed considerate recovery
+   ([results](docs/phase3-adaptive-strategies.md))
+7. Gymnasium multi-agent interface; benchmarking against
    [BOPTEST](https://ibpsa.github.io/project1-boptest/) `multizone_residential_hydronic` KPIs
