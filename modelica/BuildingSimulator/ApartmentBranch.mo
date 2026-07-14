@@ -34,8 +34,14 @@ model ApartmentBranch
      40 kJ/(m2K) x A_floor (64 m2 default). With the ISO-strength coupling
      the fast node includes what moves with the air; tau_fast ~ 40 min,
      matching grey-box identification of furnished rooms";
-  parameter Modelica.Units.SI.HeatCapacity C_mass = 13.5e6
-    "Structural mass capacity (slow node)";
+  parameter Modelica.Units.SI.HeatCapacity C_mass = 28.8e6
+    "Structural mass capacity (slow node): 450 kJ/(m2K) x A_floor (64 m2
+     default), the night-accessible capacity of masonry + concrete-slab
+     construction (bottom-up: two half-thickness RC slabs ~430 kJ/m2K +
+     wall shares; DIN V 18599-2 heavy class 468 kJ/m2K, DIN V 4108-6
+     ~560). The ISO 13790 class value (heavy, 260) is a monthly-method
+     convention that makes free cooling ~2x faster than field records;
+     calibration study: sil/calibrate_deep_mass.py";
   parameter Modelica.Units.SI.ThermalConductance G_win = 40
     "Air node to outdoor: windows + infiltration (fast losses)";
   parameter Modelica.Units.SI.ThermalConductance G_wall = 90

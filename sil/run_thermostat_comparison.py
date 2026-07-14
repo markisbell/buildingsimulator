@@ -19,10 +19,12 @@ import pandas as pd
 from fmpy import read_model_description
 
 from harness import run_simulation
+from boiler import Schnellaufheizung
 from controllers import PIThermostat, ScriptedValve
 from thermostat import ElectronicThermostat, SampledPI
 from scenario_common import (C2K, DAY, SCHEDULES, day_night_setpoint,
-                             default_orientations, make_winter_scenario)
+                             default_orientations, heating_curve,
+                             make_winter_scenario, winter_weather)
 from runstore import create_run
 import kpi
 
@@ -46,8 +48,21 @@ CONTROL_DT = 60.0
 EXOGENOUS, SOLAR = make_winter_scenario(N_APT)
 
 
+def supply_controller():
+    """Outdoor-reset curve + Schnellaufheizung (era morning boost).
+    Registered as the TSupSet controller: overrides the feedback-blind
+    exogenous curve so the boost can watch room recovery."""
+    rooms = {f"TRoom[{i}]": day_night_setpoint(*sched)
+             for i, sched in SCHEDULES.items() if sched is not None}
+    earliest_day_start = min(s[2] for s in SCHEDULES.values() if s is not None)
+    return Schnellaufheizung(
+        lambda t: heating_curve(winter_weather(t)), rooms,
+        day_start_h=earliest_day_start, boost_dK=12.0,
+        t_sup_max=C2K + 75.0)  # 60/40-designed plant: boost cap 75 degC
+
+
 def build_ideal():
-    controllers = {}
+    controllers = {"TSupSet": supply_controller()}
     for i in range(1, N_APT + 1):
         sched = SCHEDULES.get(i)
         if sched is None:
@@ -59,7 +74,7 @@ def build_ideal():
 
 
 def build_realistic():
-    controllers = {}
+    controllers = {"TSupSet": supply_controller()}
     for i in range(1, N_APT + 1):
         sched = SCHEDULES.get(i)
         if sched is None:
