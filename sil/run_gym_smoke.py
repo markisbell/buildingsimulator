@@ -37,8 +37,8 @@ def smoke_random():
           f"(finite, negative as designed: {total < 0})")
 
 
-def validate_pi():
-    env = BuildingEnv(FMU, episode_days=3)
+def validate_pi(observation_mode="plant"):
+    env = BuildingEnv(FMU, episode_days=3, observation_mode=observation_mode)
     pis = {}
     for i in range(1, env.n + 1):
         sched = SCHEDULES.get(i)
@@ -59,25 +59,31 @@ def validate_pi():
         obs, r, _, trunc, info = env.step(action)
         comfort += info["comfort_kh"]
         energy += info["energy_kwh"]
-        # track day-2+ daytime deviation of apartment 1
+        # track day-2+ daytime deviation of apartment 1 — always against
+        # the TRUE temperature (in device mode obs[0] is the sensed one)
         hour = (info["t"] % 86400.0) / 3600.0
         if info["t"] > 86400.0 and 8 <= hour < 22:
             sp = day_night_setpoint(*SCHEDULES[1])(info["t"])
-            day_errs.append(abs(obs[0] - sp))
+            day_errs.append(abs(info["TRoom_true"][0] - sp))
 
     env.close()
     mean_err = float(np.mean(day_errs))
-    print(f"PI-through-env, 3 days: comfort {comfort:.1f} K*h, "
-          f"boiler {energy:.1f} kWh")
-    print(f"apartment 1 daytime |T - sp| (day 2+): mean {mean_err:.2f} K")
-    ok = mean_err < 0.6 and 200 < energy < 1500
-    print("VALIDATION", "PASS" if ok else "FAIL",
-          "(PI through the env holds rooms near setpoint at plausible "
-          "energy)")
-    return ok
+    print(f"PI-through-env ({observation_mode}), 3 days: "
+          f"comfort {comfort:.1f} K*h, boiler {energy:.1f} kWh")
+    print(f"apartment 1 daytime |T_true - sp| (day 2+): mean {mean_err:.2f} K")
+    return mean_err, energy
 
 
 if __name__ == "__main__":
     smoke_random()
-    ok = validate_pi()
-    raise SystemExit(0 if ok else 1)
+    err_plant, energy_plant = validate_pi("plant")
+    ok_plant = err_plant < 0.6 and 200 < energy_plant < 1500
+    print("PLANT-MODE VALIDATION", "PASS" if ok_plant else "FAIL",
+          "(PI through the env holds rooms near setpoint at plausible "
+          "energy)")
+    err_dev, energy_dev = validate_pi("device")
+    ok_dev = 0.5 < err_dev < 2.0 and err_dev > err_plant + 0.3
+    print("DEVICE-MODE VALIDATION", "PASS" if ok_dev else "FAIL",
+          "(the sensed observations reproduce the device pathology: "
+          "chronic undershoot of the true temperature)")
+    raise SystemExit(0 if (ok_plant and ok_dev) else 1)

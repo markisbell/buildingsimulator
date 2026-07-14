@@ -167,6 +167,8 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 7. ✅ Gymnasium interface (`sil/gym_env.py`): the verified plant as a standard RL environment —
    valve-vector actions through the real motor rate limit, leaderboard-consistent reward
    components, PI-policy equivalence validated (`sil/run_gym_smoke.py`)
-8. Benchmarking against [BOPTEST](https://ibpsa.github.io/project1-boptest/)
-   `multizone_residential_hydronic` KPIs (requires Docker); device-realistic observation mode
-   (through the eTRV sensor model) for learning-under-bias experiments
+8. ✅ Device-realistic observation mode (`observation_mode="device"`): agents observe through the
+   eTRV valve-mounted sensor while the reward stays on true comfort — the
+   learning-under-sensor-bias setting (validated: a sensed-obs PI reproduces the 1.4 K undershoot)
+9. Benchmarking against [BOPTEST](https://ibpsa.github.io/project1-boptest/)
+   `multizone_residential_hydronic` KPIs (requires Docker)

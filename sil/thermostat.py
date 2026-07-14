@@ -61,6 +61,34 @@ class SampledPI:
         return u
 
 
+class ValveSensor:
+    """The valve-mounted temperature sensor of an eTRV: reads high while
+    the radiator is hot (first-order-lagged bias proportional to radiator
+    output) plus quantization and noise. Extracted so both the device
+    model and the gym environment's device-observation mode share one
+    source of truth for this realism."""
+
+    def __init__(self, q_rad_nominal=4500.0, bias_max=2.0, tau=600.0,
+                 resolution=0.1, noise_std=0.05, seed=0):
+        self.q_rad_nominal = q_rad_nominal
+        self.bias_max = bias_max
+        self.tau = tau
+        self.resolution = resolution
+        self.noise_std = noise_std
+        self._rng = np.random.default_rng(seed)
+        self._bias = 0.0
+        self._last_t = None
+
+    def read(self, t, T_true, q_rad):
+        dt = 0.0 if self._last_t is None else t - self._last_t
+        self._last_t = t
+        target = self.bias_max * max(0.0, q_rad) / self.q_rad_nominal
+        if dt > 0.0:
+            self._bias += (target - self._bias) * min(1.0, dt / self.tau)
+        raw = T_true + self._bias + self._rng.normal(0.0, self.noise_std)
+        return round(raw / self.resolution) * self.resolution
+
+
 class ElectronicThermostat:
     """Realistic eTRV wrapper, drop-in compatible with the SIL harness
     (step(t, measurements) -> valve position).
@@ -96,9 +124,12 @@ class ElectronicThermostat:
         self.auto_adapt = auto_adapt
         self.stall_ma = stall_ma
         self.actuator = actuator or ValveActuator(seed=seed + 1000)
-        self._rng = np.random.default_rng(seed)
+        self.sensor = ValveSensor(q_rad_nominal=q_rad_nominal,
+                                  bias_max=sensor_bias_max,
+                                  tau=sensor_tau,
+                                  resolution=sensor_resolution,
+                                  noise_std=sensor_noise_std, seed=seed)
 
-        self._bias = 0.0
         self._position = 0.0   # firmware's commanded opening (0..1)
         self._last_sample = None
         self._last_t = None
@@ -139,13 +170,7 @@ class ElectronicThermostat:
         return self.adaptation
 
     def _sense(self, t, T_true, q_rad):
-        # lagged bias toward the radiator-output-proportional target
-        dt = 0.0 if self._last_t is None else t - self._last_t
-        target = self.sensor_bias_max * max(0.0, q_rad) / self.q_rad_nominal
-        if dt > 0.0:
-            self._bias += (target - self._bias) * min(1.0, dt / self.sensor_tau)
-        raw = T_true + self._bias + self._rng.normal(0.0, self.sensor_noise_std)
-        return round(raw / self.sensor_resolution) * self.sensor_resolution
+        return self.sensor.read(t, T_true, q_rad)
 
     def step(self, t, measurements):
         dp = measurements.get(self.dp_output, 0.0) if self.dp_output else 0.0
