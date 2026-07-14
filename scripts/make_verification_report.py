@@ -10,6 +10,7 @@ OUT = RESULTS / "verification-report.html"
 IMAGES = {
     "IMG_DESIGN": "design_day_80s.png",
     "IMG_SWEEP": "valve_sweep.png",
+    "IMG_FLOWOP": "valve_flow_evidence.png",
     "IMG_ADAPT": "adaptation_run.png",
     "IMG_CMP": "cmp_ideal_vs_realistic.png",
     "IMG_BAL": "balancing_80s.png",
@@ -127,6 +128,21 @@ Script: <code>run_design_day.py</code>.</figcaption></figure>
 coincide — the hydraulics carry no hysteresis) against the pure Kv table; the gap is valve
 authority. The dotted line marks the RA-N anchor: 81 % flow at the x<sub>p</sub> = 2 K lift.
 Right: the device-side 0.1 mm motor–pin play. Script: <code>run_valve_sweep.py</code>.</figcaption></figure>
+<div class="finding"><em>Opening vs actual pipe flow in operation:</em> the quasi-static sweep above
+is one valve alone; in the running building the same opening delivers a <b>band</b> of flows,
+because the branch shares its differential pressure with 23 other valves through the risers.
+At the 06:00 boost the flow through this branch collapses at unchanged opening — the neighbours
+open and take its differential pressure; the same interaction runs in reverse as they close.
+At the working stroke the P5–P95 flow
+band spans ±29 % around its mid (16.8–30.8 l/h at y = 0.13–0.17). Full-open median flow matches
+the design flow of the branch (74.9 l/h), closing the loop between valve table, ring presetting
+and network sizing.</div>
+<figure><img src="data:image/png;base64,@@IMG_FLOWOP@@" alt="Opening vs flow in operation">
+<figcaption>Left: commanded opening and measured branch flow of one living-room TRV through a
+recovery morning (Building80s, as-built rings, eTRVs everywhere). Right: five days of operating
+points against the Kv-table shape — the installed characteristic as a band.
+Script: <code>make_flow_evidence.py</code> on the <code>run_coordinated_recovery.py</code>
+records.</figcaption></figure>
 </section>
 
 <section>

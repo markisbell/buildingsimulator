@@ -56,6 +56,7 @@ N_FLO = N_ZON // 8
 OUTPUTS = ([f"TRoom[{k}]" for k in range(1, N_ZON + 1)]
            + [f"QRad[{k}]" for k in range(1, N_ZON + 1)]
            + [f"dpVal[{k}]" for k in range(1, N_ZON + 1)]
+           + [f"mFlow[{k}]" for k in range(1, N_ZON + 1)]
            + ["TSup", "TRet", "QBoi"])
 
 # Evaluate the day-6 recovery: the night-anchor bias learning needs ~5

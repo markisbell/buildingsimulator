@@ -95,6 +95,18 @@ dotted line the RA-N anchor (81 % flow at the x<sub>p</sub> = 2 K lift, i.e. 30 
 1.5 mm stroke). Right: the 0.1 mm motor–pin play produces the opening/closing
 hysteresis a control algorithm actually has to fight.*
 
+**Opening vs flow in operation** (`scripts/make_flow_evidence.py`, records from
+`sil/run_coordinated_recovery.py`): in the running 24-room building the installed
+characteristic is a *band*, not a curve — the same opening delivers different flows
+depending on the state of the other 23 valves (shared riser differential pressure;
+±29 % P5–P95 at the working stroke). At the 06:00 boost the flow through a
+near-fully-open valve collapses at unchanged opening as the neighbours open and
+take its head. The full-open median flow reproduces the branch design flow
+(74.9 l/h), closing the loop between the Kv table, ring presetting and network
+sizing:
+
+![Opening vs flow in operation](figures/valve_flow_evidence.png)
+
 **Interaction found during verification:** switching from 1 % industrial-valve leakage
 to rubber-seal-tight 0.04 % changed the plant's night behavior qualitatively. With all
 valves closed, water only circulates pump → boiler → bypass; that loop is adiabatic in

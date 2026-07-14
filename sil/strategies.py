@@ -52,32 +52,39 @@ class _CompensatedAlgorithm:
 class BiasCompensatingThermostat(ElectronicThermostat):
     def __init__(self, *args,
                  comp_alpha=0.5,        # learning rate per night anchor
-                 comp_k_init=0.0,       # K bias at full heat proxy, initial
+                 comp_k_init=1.0,       # factory prior: rooms whose usage
+                                        # pattern never grants a usable
+                                        # closure (found: one bath) must
+                                        # not run uncompensated; anchors
+                                        # refine from here
                  comp_k_max=3.0,        # K, sanity clamp
-                 # The settle window must span the RADIATOR STORAGE
-                 # discharge, not just the 600 s sensor lag: after closure
-                 # the valve body keeps tracking the stored-heat emission
-                 # (tau_e ~ 30-50 min, radiator-modeling.md section 3).
-                 # With a 45-min window the estimator attributes the
-                 # residual warm-body drop to room cooling and learns
-                 # k ~ 0 on 90/70 era radiators (found in the coordinated-
-                 # recovery experiment).
-                 anchor_settle_s=5400.0,   # bias + storage decayed (1.5 h)
-                 anchor_slope_s=3600.0,    # window to measure true cooling
+                 # Anchor windows must span the RADIATOR STORAGE discharge,
+                 # not just the 600 s sensor lag: after closure the valve
+                 # body keeps tracking the stored-heat emission (tau_e ~
+                 # 30-50 min). Fast-cooling small rooms reopen after only
+                 # ~2.5 h, so the estimator must also work on PARTIAL
+                 # decays: three equal windows over whatever closure is
+                 # available; the window-drop differences form a geometric
+                 # sequence in the bias decay, so the bias at closure is
+                 # recoverable without waiting for full settling
+                 # (Prony-style identification, see _finish_anchor).
+                 anchor_min_s=5400.0,   # shortest usable closure (1.5 h)
+                 anchor_max_s=9000.0,   # evaluate at the latest after 2.5 h
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.comp_alpha = comp_alpha
         self.k_hat = comp_k_init
         self.comp_k_max = comp_k_max
-        self.anchor_settle_s = anchor_settle_s
-        self.anchor_slope_s = anchor_slope_s
+        self.anchor_min_s = anchor_min_s
+        self.anchor_max_s = anchor_max_s
 
         self._u_filt = 0.0
         self._last_comp_t = None
         self._closed_since = None
-        self._anchor = None       # state of the running night anchor
+        self._anchor = None       # dict: u0 + buffered (t, Ts) samples
         self.k_log = []           # (t, k_hat) after every anchor update
         self.comp_log = []        # (t, T_sensed, T_comp, u_filt)
+        self.anchor_debug = []    # estimator internals per finished anchor
 
         # wrap the control algorithm with the compensation shim
         self.algorithm = _CompensatedAlgorithm(self, self.algorithm)
@@ -113,36 +120,80 @@ class BiasCompensatingThermostat(ElectronicThermostat):
     def _update_anchor(self, t, T_sensed, pos):
         closed = pos <= 0.02
         if not closed:
+            if self._anchor is not None:
+                # closure ends: evaluate whatever decay we witnessed
+                self._finish_anchor()
             self._closed_since = None
-            self._anchor = None
             return
         if self._closed_since is None:
-            # closure begins: remember pre-closure heat level and reading
+            # closure begins: remember pre-closure heat level, buffer samples
             self._closed_since = t
-            self._anchor = {"Ts0": T_sensed, "u0": self._u_filt}
+            self._anchor = {"u0": self._u_filt, "samples": [(t, T_sensed)]}
             return
         if self._anchor is None:      # this closure already produced an update
             return
+        self._anchor["samples"].append((t, T_sensed))
+        if t - self._closed_since >= self.anchor_max_s:
+            self._finish_anchor()     # long closure: no need to wait longer
 
-        elapsed = t - self._closed_since
-        a = self._anchor
-        if "Ts_settle" not in a:
-            if elapsed >= self.anchor_settle_s:
-                a["Ts_settle"], a["t_settle"] = T_sensed, t
-            return
-        if t - a["t_settle"] < self.anchor_slope_s:
-            return
+    @staticmethod
+    def _edge_mean(samples, t_want, half=600.0):
+        """Mean reading around a window edge: averages the 0.1 K sensor
+        quantization down to identification-grade resolution."""
+        vals = [Ts for (ts, Ts) in samples if abs(ts - t_want) <= half]
+        return sum(vals) / len(vals) if vals else \
+            min(samples, key=lambda s: abs(s[0] - t_want))[1]
 
-        # bias settled; the remaining slope is true room cooling
-        late_rate = (a["Ts_settle"] - T_sensed) / (t - a["t_settle"])  # K/s
-        true_drop = max(0.0, late_rate) * self.anchor_settle_s
-        bias_est = (a["Ts0"] - a["Ts_settle"]) - true_drop
-        if a["u0"] >= 0.15 and bias_est > -0.2:  # identifiable, sane anchor
-            k_obs = max(0.0, bias_est) / max(a["u0"], 0.15)
-            self.k_hat += self.comp_alpha * (k_obs - self.k_hat)
-            self.k_hat = min(max(self.k_hat, 0.0), self.comp_k_max)
-        self.k_log.append((t, self.k_hat))
-        self._anchor = None           # one update per closure
+    def _finish_anchor(self):
+        """Three-window bias identification on the buffered closure.
+
+        Model: Ts(tau) = (T0 - r*tau) + b0*q(tau) with the bias decay
+        q(tau) ~ exp(-tau/tau_b) (sensor lag + radiator storage, tau_b
+        unknown). Split the closure into three equal windows with drops
+        D1, D2, D3: the differences form a geometric sequence,
+        (D2-D3)/(D1-D2) = rho = exp(-T/(3 tau_b)), so the bias at closure
+        b0 = (D1-D2)/(1-rho)^2 is identifiable from a PARTIAL decay —
+        no settling wait, which fast-cooling rooms never grant."""
+        import math
+
+        a, self._anchor = self._anchor, None
+        samples = a["samples"]
+        T = samples[-1][0] - samples[0][0]
+        if T < self.anchor_min_s or a["u0"] < 0.15:
+            return                    # too short / not identifiable
+        # skip the S-shaped flat top of the double-lag decay (sensor lag on
+        # top of the radiator discharge): after ~25 min the sensor-lag mode
+        # is gone and the remainder decays near-single-exponentially
+        skip = 1500.0
+        t_start = samples[0][0] + skip
+        T2 = samples[-1][0] - t_start
+        half = min(600.0, T2 / 6)
+        s0 = self._edge_mean(samples, t_start, half)
+        s1 = self._edge_mean(samples, t_start + T2 / 3, half)
+        s2 = self._edge_mean(samples, t_start + 2 * T2 / 3, half)
+        s3 = self._edge_mean(samples, t_start + T2, half)
+        d1, d2, d3 = s0 - s1, s1 - s2, s2 - s3
+        g1, g2 = d1 - d2, d2 - d3
+        if g1 <= 0.04:
+            rho, b0 = None, 0.0       # no curvature: bias was already ~zero
+        else:
+            # physical bound: the storage decay tau_b stays well under
+            # ~1.6 h, so rho <= 0.6 — also caps noise amplification
+            rho = min(max(g2 / g1, 0.05), 0.60)
+            b_at_start = g1 / (1.0 - rho) ** 2
+            # back-extrapolate over the skipped flat top with the measured
+            # decay itself (bounded: the flat top decays slower than exp)
+            tau_b = -(T2 / 3) / math.log(rho)
+            b0 = min(b_at_start * min(math.exp(skip / tau_b), 2.0), 3.0)
+        k_obs = min(max(b0, 0.0) / max(a["u0"], 0.15), self.comp_k_max)
+        self.anchor_debug.append(
+            {"t_h": samples[-1][0] / 3600, "T_h": T / 3600,
+             "d": (round(d1, 3), round(d2, 3), round(d3, 3)),
+             "rho": rho, "b0": round(b0, 3),
+             "u0": round(a["u0"], 3), "k_obs": round(k_obs, 3)})
+        self.k_hat += self.comp_alpha * (k_obs - self.k_hat)
+        self.k_hat = min(max(self.k_hat, 0.0), self.comp_k_max)
+        self.k_log.append((samples[-1][0], self.k_hat))
 
 
 class BatteryAwareThermostat(BiasCompensatingThermostat):
@@ -224,9 +275,17 @@ class ConsiderateRecoveryThermostat(BatteryAwareThermostat):
     own_arrived_K) while any peer still reports a deficit above
     peer_needy_K, it caps its opening at y_cap — releasing differential
     pressure to the laggards. The cap lifts (hysteresis) once the worst
-    peer deficit falls below peer_release_K. y_cap = 0.20 sits above the
-    steady-state working point (~0.15), so the arrived room loses nothing;
-    with the quick-opening insert the freed head is what matters.
+    peer deficit falls below peer_release_K.
+
+    FINAL EXPERIMENT VERDICT (run_coordinated_recovery.py, five rounds):
+    with well-calibrated bias compensation on every device, greedy
+    recovery beats considerate capping on all metrics (worst room at
+    +3 h: 1.09 vs 1.75 K) — the boosted 1.3x plant resolves the
+    contention itself, and capping arrived rooms only delays them. The
+    apparent fairness problem of the earlier rounds was residual sensor
+    bias in disguise. Kept as a documented negative result; the policy
+    would only pay in plants without reheat margin (no boost, no
+    oversizing) where recovery contention is genuinely binding.
     """
 
     def __init__(self, *args, coordinator=None, own_arrived_K=0.3,
