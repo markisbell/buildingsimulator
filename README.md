@@ -164,5 +164,9 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
    battery policies, optimal start) closing the device comfort penalty and cutting valve moves
    to a third, plus a documented negative result on distributed considerate recovery
    ([results](docs/phase3-adaptive-strategies.md))
-7. Gymnasium multi-agent interface; benchmarking against
-   [BOPTEST](https://ibpsa.github.io/project1-boptest/) `multizone_residential_hydronic` KPIs
+7. ✅ Gymnasium interface (`sil/gym_env.py`): the verified plant as a standard RL environment —
+   valve-vector actions through the real motor rate limit, leaderboard-consistent reward
+   components, PI-policy equivalence validated (`sil/run_gym_smoke.py`)
+8. Benchmarking against [BOPTEST](https://ibpsa.github.io/project1-boptest/)
+   `multizone_residential_hydronic` KPIs (requires Docker); device-realistic observation mode
+   (through the eTRV sensor model) for learning-under-bias experiments

@@ -28,7 +28,7 @@ omc --version
 echo "--- python deps (dedicated venv, avoids debian-owned packages)"
 python3 -m venv /opt/silenv
 /opt/silenv/bin/pip install -q --upgrade pip
-/opt/silenv/bin/pip install -q fmpy numpy pandas matplotlib pvlib
+/opt/silenv/bin/pip install -q fmpy numpy pandas matplotlib pvlib gymnasium
 /opt/silenv/bin/python3 -c "import fmpy, pvlib, pandas; print('python deps ok, fmpy', fmpy.__version__)"
 
 echo "--- Modelica Buildings 13.0.0 (package manager)"
