@@ -16,6 +16,7 @@ IMAGES = {
     "IMG_OSC": "oscillation_check_80s.png",
     "IMG_RAD": "radiator_check_80s.png",
     "IMG_ABDYN": "radiator_dynamics_ab.png",
+    "IMG_CORRIDOR": "neighbor_test_80s.png",
     "IMG_DT": "dt_comparison_80s.png",
 }
 
@@ -83,10 +84,11 @@ footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
   <h1>Verification report — 1980s German multi-family building simulator</h1>
   <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
   3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
-  repo commit <b>HEAD</b> · 2026-07-13 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
+  repo commit <b>HEAD</b> · 2026-07-14 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
   furnished-room fast node (C<sub>air</sub> = 40 kJ/m²K, τ<sub>fast</sub> ≈ 41 min) ·
+  night-accessible structural mass (C<sub>mass</sub> = 450 kJ/m²K, τ<sub>slow</sub> ≈ 70–80 h) ·
   radiators 1.3× design load (era sizing), dynamic water/steel storage (8 l + 30 kg per kW,
-  τ<sub>e</sub> ≈ 30–50 min)</div>
+  τ<sub>e</sub> ≈ 30–50 min) · Schnellaufheizung morning boost (+12 K)</div>
 </header>
 <p class="lede">Every verification claim, next to its graphical evidence. Each figure is the
 unmodified output of a reproducible script in <code>sil/</code>; the numbers in the tables
@@ -147,10 +149,10 @@ algorithms. Script: <code>run_adaptation_demo.py</code>.</figcaption></figure>
 <h2>Identical building, weather and solar; only the thermostat hardware differs</h2>
 <table>
 <tr><th>KPI (days 2–7)</th><th>Ideal PI</th><th>Realistic eTRV</th></tr>
-<tr><td>Discomfort</td><td class="num">427 K·h</td><td class="num">935 K·h</td></tr>
-<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">164 K·h</td><td class="num">65.4 K·h</td></tr>
-<tr><td>Boiler energy</td><td class="num">2022 kWh</td><td class="num">1921 kWh</td></tr>
-<tr><td>Valve travel / moves</td><td class="num">84 strokes / 28 054</td><td class="num">326 strokes / 3 386</td></tr>
+<tr><td>Discomfort</td><td class="num">410 K·h</td><td class="num">854 K·h</td></tr>
+<tr><td>Overheating (&gt; setpoint + 1 K)</td><td class="num">137 K·h</td><td class="num">52.9 K·h</td></tr>
+<tr><td>Boiler energy</td><td class="num">1989 kWh</td><td class="num">1902 kWh</td></tr>
+<tr><td>Valve travel / moves</td><td class="num">88 strokes / 22 078</td><td class="num">306 strokes / 3 108</td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_CMP@@" alt="Ideal vs realistic comparison">
 <figcaption>Top: the valve-mounted sensor’s warm bias keeps the real device ~1 K under setpoint.
@@ -165,7 +167,7 @@ Bottom: sensor reading vs true room temperature. Script: <code>run_thermostat_co
 <tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
 <tr><td>Commissioning flows (TRVs open)</td><td class="num">± 5 % of demand</td><td class="num">worst 3.4 %</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Commissioning return</td><td class="num">≈ 70 °C</td><td class="num">63.4 °C</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">1.59 K → 1.26 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">2.25 K → 1.89 K</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <div class="finding"><em>Documented physics:</em> under exact-setpoint integral control the
 operating return equals supply − Q/(ṁ·c<sub>p</sub>) and is invariant to balancing — with 1.3×
@@ -183,9 +185,9 @@ Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json
 <table>
 <tr><th>Signature</th><th>Field-data range</th><th>Measured</th><th></th></tr>
 <tr><td>Burner starts</td><td class="num">10–250 / day</td><td class="num">73 / day</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.4 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.050 K</td><td><span class="pass">PASS</span></td></tr>
-<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">1.07</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Supply sawtooth</td><td class="num">5–20 K pk-pk</td><td class="num">19.0 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Room ripple (detrended std)</td><td class="num">0.02–0.6 K</td><td class="num">0.049 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">1.05</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_OSC@@" alt="Oscillation traces">
 <figcaption>Day 2, 06–12 h: supply sawing on ~15-minute burner cycles; room temperatures dipping
@@ -204,16 +206,26 @@ chatter; burner duty blocks. Script: <code>run_oscillation_check.py</code>.</fig
 </table>
 <div class="finding"><em>Energy dynamics:</em> the radiators carry their water/steel storage
 (8 l + 30 kg per kW, emission lag ≈ 30–50 min) since the field-realism revision. The A/B against
-the quasi-static build shows the field signatures appearing: boost overshoot (overheating +25 %
-ideal / +40 % eTRV), the first cooldown hour cushioned (−1.5 vs −1.8 K/h), slow eTRV
-charge/discharge night cycles (flow CV 0.80 → 1.07), longer burner cycles (83 → 73 starts/day).
-<br><em>Known limitation:</em> multi-hour free cooling still runs ≈ 2× faster than field overnight
-records (−0.79 vs ≈ −0.2…−0.4 K/h first hour) — the 2R2C zone lacks deep wall mass; warm-neighbor
-and initialization hypotheses were tested and eliminated (docs/heatup-dynamics.md §6). A calibrated
-third zone node is planned.</div>
+the quasi-static build shows the field signatures appearing: boost overshoot, the first cooldown
+hour cushioned, slow eTRV charge/discharge night cycles, longer burner cycles.</div>
 <figure><img src="data:image/png;base64,@@IMG_ABDYN@@" alt="Radiator dynamics A/B">
 <figcaption>Heat-up and cooldown, quasi-static (left) vs dynamic (right) radiators, identical
-scenario. Script: <code>compare_radiator_dynamics.py</code>.</figcaption></figure>
+scenario (measured at the pre-night-mass capacity). Script:
+<code>compare_radiator_dynamics.py</code>.</figcaption></figure>
+<div class="finding"><em>Night-mass calibration (field corridor):</em> overnight free cooling
+originally ran ≈ 2× faster than field records; initialization, the warm-neighbor protocol and
+the radiator storage were tested and eliminated as causes, and a weakly-coupled deep-mass node
+was a null result. The corridor is met by the strongly-coupled night-accessible capacity
+(C<sub>mass</sub> 260 → 450 kJ/m²K, backed by DIN V 18599-2/4108-6 and bottom-up construction
+inventory): free-cool tail <b>−0.25 K/h</b> (corridor −0.2…−0.4), 8-h drop 2.81 K, a 3 K setback
+lasting ≈ 7–8 h — while the era's Schnellaufheizung boost (+12 K morning window) keeps the bulk
+of recovery within ≈ 1 h. The field-observed fast-up/slow-down asymmetry is thereby reproduced
+as what it is: a power phenomenon (docs/heatup-dynamics.md §6,
+<code>calibrate_deep_mass.py</code>).</div>
+<figure><img src="data:image/png;base64,@@IMG_CORRIDOR@@" alt="Corridor verification">
+<figcaption>Corridor verification: 3 K setback of one living room at −5 °C, whole-building vs
+single-room protocol; the tail cools at −0.25 K/h and warm neighbors now visibly stretch the
+descent. Script: <code>run_neighbor_test.py</code>.</figcaption></figure>
 <figure><img src="data:image/png;base64,@@IMG_RAD@@" alt="Radiator operating points">
 <figcaption>Left: measured FMU operating points on the analytical curves — exact continuous
 solution, Buildings 5-element discretization, and the LMTD engineering formula, all at identical

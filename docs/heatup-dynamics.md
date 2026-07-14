@@ -35,7 +35,8 @@ coincides with the solar ramp.*
 
 The zone is 2R2C: a fast node — air, furniture and interior surface layers
 ($C_{air} = 40\,\mathrm{kJ/(m^2K)}$, $\tau_{fast} \approx 41$ min) — and a slow
-structural mass node ($C_{mass} = 260\,\mathrm{kJ/(m^2K)}$, ISO 13790 "heavy" class),
+structural mass node ($C_{mass} = 450\,\mathrm{kJ/(m^2K)}$, the night-accessible
+capacity of masonry + concrete-slab construction, see §6),
 coupled by $G_{int}$:
 
 $$C_{air}\dot T_{air} = \dot Q_{conv} + G_{int}(T_{mass}-T_{air}) + G_{win}(T_{out}-T_{air})$$
@@ -70,9 +71,11 @@ Three compounding, monotone effects:
    *all* TRVs demand maximum, sagging the supply below its curve. DIN EN 12831
    acknowledges exactly this regime with the reheat-capacity supplement $f_{RH}$
    (Aufheizleistung): recovery demand structurally exceeds steady design load. The
-   simulator's radiators are accordingly sized 1.3× the naive design load (era
-   practice), leaving ≈ 12 % effective reheat margin after the ISO interior coupling —
-   enough to complete the 4 K recovery by midday.
+   simulator carries both era answers: radiators sized 1.3× the naive design load,
+   and a **Schnellaufheizung** supervisory boost (`sil/boiler.py`: +12 K on the
+   heating curve inside a morning window until the rooms recover — DIN 4702-8-era
+   Aufheizoptimierung). With the boost, the bulk of a 3 K recovery completes within
+   ≈ 1 h; without it, the calibrated night mass would stretch recovery past 5 h.
 
 ## 3. Phase 3 — re-acceleration (external and coupling terms turn positive)
 
@@ -92,7 +95,8 @@ At the *end* of recovery the radiator storage produces the field-typical **setpo
 overshoot**: rooms that arrive while their radiator is still hot coast past the
 setpoint — the stored heat is on the room side of the valve (radiator-modeling.md §3).
 Enabling the storage raised the overheating KPI by ≈ 25 % (ideal PI) and ≈ 40 %
-(realistic eTRV) in the comparison run.
+(realistic eTRV) in the comparison run (measured at the pre-calibration
+C_mass = 260; the effect persists at 450, amplified by the boost's hotter radiators).
 
 ## 4. Implication for control research
 
@@ -113,15 +117,15 @@ The cooldown after setback shows the same two-node structure in reverse
 
 *Fig. 3 — Room temperature and radiator power after the 22:00 setback. The radiator
 power decays over ≈ 1.5 h (stored water/steel heat) instead of stopping with the valve;
-the ideal PI free-cools for ≈ 3.7 h before re-engaging at the night setpoint — with a
+the ideal PI free-cools for ≈ 6 h before re-engaging at the night setpoint — with a
 slight undershoot-and-wobble, the PI fighting the emission lag; the realistic eTRV
-glides ≈ 1 K lower (sensor bias) with slow charge/discharge night cycles.*
+glides ≈ 0.5-1 K lower (sensor bias) with slow charge/discharge night cycles.*
 
 | Window after setback | Rate | Mechanism |
 |---|---|---|
-| first hour | −1.5 K/h | **cushioned air-node fast phase**: the fast node relaxes with $\tau \approx 41\,$min, but the radiator/riser storage keeps feeding the room (bare relaxation without it: −1.8 K/h) |
-| hours 2-3 | −0.76 K/h | transition: the storage is spent; the delayed descent catches up, air slaved to the slowly cooling structure |
-| rest of night | −0.16 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power; pure structural cooling would be ≈ −0.5 K/h initially |
+| first hour | −1.40 K/h | **cushioned air-node fast phase**: the fast node relaxes with $\tau \approx 41\,$min, but the radiator/riser storage keeps feeding the room |
+| hours 2-3 | −0.67 K/h | transition: the storage is spent; the delayed descent catches up, air slaved to the slowly cooling structure |
+| rest of night | −0.12 K/h | **not free cooling** — the thermostat holds the night setpoint with rising trickle/cycling power |
 
 The apparent "fast cooldown" is therefore the *air separating from the structure*, not
 the building losing its stored heat — the masonry cools an order of magnitude slower.
@@ -137,30 +141,40 @@ this analysis: the coupling raises the steady heat load to 65 W/m²
 $\tau_{fast} \approx 41$ min, inside the 0.5-2 h corridor that grey-box identification
 finds for furnished rooms.
 
-## 6. Open point: the absolute cooldown rate vs field records
+## 6. Resolved: the absolute cooldown rate vs field records
 
 Field recordings in this building class show two signatures: setpoint **overshoot**
 after recovery (reproduced since the radiator storage exists,
-radiator-modeling.md §3) and **overnight cooling of only ≈ 0.2-0.4 K/h**. The model
-is not there yet on the second one. Current state, measured on the era-accurate
+radiator-modeling.md §3) and **overnight cooling of only ≈ 0.2-0.4 K/h**. The second
+one is calibrated as of the night-mass revision. Measured on the era-accurate
 Building80s under a clean protocol (`sil/run_neighbor_test.py`: 48 h verified
 warm-up at setpoint, 3 K setback of a mid-floor south living room, −5 °C, no sun,
 no gains, ideal PI):
 
-| Quantity | Model | Field |
-|---|---|---|
-| First-hour rate | **−0.79 K/h** (radiator storage already cushions; ≈ −1.2 without) | ≈ −0.2…−0.4 K/h |
-| 3 K setback consumed after | ≈ 5.5 h | typically not within a night |
+| Quantity | Before (C_mass = 260) | **Calibrated (C_mass = 450)** | Field |
+|---|---|---|---|
+| First-hour rate | −0.79 K/h | **−0.77 K/h** (the fast-phase knee — field curves show it too) | ≈ −0.5…−1 K/h knee |
+| Free-cool tail (h 4-8) | −0.44 K/h | **−0.25 K/h** | ≈ −0.2…−0.4 K/h |
+| 3 K setback consumed after | ≈ 5.5 h | **≈ 7-8 h** (8-h drop 2.81 K) | typically most of a night |
 
-**Hypotheses tested and eliminated:**
+With the Schnellaufheizung boost the *morning* recovery does its bulk work
+(≈ 2 K) within the first hour — the field-typical asymmetry (heat-up fast,
+cooldown several times longer) is a **power** phenomenon, not a network
+property: linear RC time constants are direction-symmetric, and the calibration
+study (`sil/calibrate_deep_mass.py`) shows recovery time becomes nearly
+independent of the zone mass once boost power exceeds ≈ 2.3 kW per room-set.
+
+**The investigation that led here — hypotheses tested and eliminated:**
 
 1. *Cold-started structure* — no: both zone nodes initialize at 20 °C and the
    protocol verifies 20.00 °C / 1059 W at the setback instant after 48 h warm-up.
-2. *Synchronized whole-building setback vs the field's warm neighbors* — no: with
-   all neighbors held at 20.0 °C the 8-h cooldown changes by **0.04 K** (Fig. 4).
-   The slab/door couplings act between the slow mass nodes, which barely diverge
-   within a night. (Caveat: bulk-to-bulk conductances understate the multi-hour
-   feed of real concrete slabs somewhat — but not by a factor 2.)
+2. *Synchronized whole-building setback vs the field's warm neighbors* — no: at
+   the original capacity the 8-h cooldown changed by only **0.04 K** with all
+   neighbors held at 20.0 °C. The slab/door couplings act between the slow mass
+   nodes, which barely diverge within a night. (At the calibrated capacity the
+   cooling is slow enough that the neighbor feed finally becomes visible —
+   the single-room case reaches the night setpoint ≈ 1 h later, Fig. 4 — but it
+   was never the factor-2 effect.)
 3. *Missing radiator storage* — resolved earlier; it is what already cushions the
    first hour and creates the ±0.2 K / ≈ 1.5 h PI limit cycle at the night
    setpoint visible in Fig. 4.
@@ -173,22 +187,25 @@ practically identical; bottom: the neighbors hold 20.0 °C while the test room f
 **Why the room can only be as slow as the mass node:** after the fast phase the air
 hangs $G_{win}/(G_{win}+G_{int}) \approx 4$-$7\,\%$ of $(T_{mass}-T_{out})$ — i.e.
 1-1.6 K — below the mass node and then tracks it. The relevant time constants
-(80s living room): air relaxation 41 min; **mass→room discharge**
-$C_{mass}/G_{int} \approx$ **4.7 h** (not the bottleneck); passive structure
-cooling $(C_{air}+C_{mass})/(G_{win}+G_{wall}) \approx$ **48 h** → initial rate
-$\approx 25\,\mathrm{K}/48\,\mathrm{h} \approx 0.5$ K/h, plus the fast-phase sag.
-Field-observed rates imply an effective τ of 80-150 h.
+(80s living room, calibrated): air relaxation 41 min; **mass→room discharge**
+$C_{mass}/G_{int} \approx$ **8.1 h** (not the bottleneck); passive structure
+cooling $(C_{air}+C_{mass})/(G_{win}+G_{wall}) \approx$ **79 h** → tail rate
+$\approx 25\,\mathrm{K}/79\,\mathrm{h} \approx 0.3$ K/h ✓ corridor.
 
-**Surviving explanation — the 2R2C truncation has no deep wall mass:**
-$C_{mass} = 260$ kJ/(m²K) is the ISO 13790 *daily-effective* capacity, and a lumped
-node exposes its bulk temperature at the surface. A real 36.5 cm masonry wall
-re-feeds its inner surface from the layers behind it (heat penetrates
-$\sqrt{a t} \approx 14$ cm of masonry in 8 h) — a semi-infinite response that any
-single lump underestimates in the first hours. Planned fix: a third node
-(≈ 300-400 kJ/(m²K) deep mass behind a few W/(m²K)), with the conductance
-calibrated against a measured overnight cooldown; secondary levers: ISO
-"very heavy" class (370 kJ/(m²K), defensible for masonry + concrete ceilings) and
-calm-night infiltration (n ≈ 0.4-0.5 h⁻¹ instead of the 0.7 era average).
+**Resolution — the night-participating capacity, not a weakly-coupled extra node:**
+the calibration study (`sil/calibrate_deep_mass.py`) first showed that a dead-end
+"deep mass" third node behind a few W/(m²K) is a **null result** (< 0.6 K change in
+the 8-h drop across the physical parameter range — it can only absorb heat as fast
+as the mass node falls below it). The corridor requires *strongly coupled*
+capacity: $C_{mass}$ was raised 260 → **450 kJ/(m²K)·A** — the night-accessible
+capacity of this construction by bottom-up inventory (two half-thickness concrete
+slabs ≈ 430 kJ/m²K alone; heat penetrates $\sqrt{a t} \approx 14$ cm of masonry in
+8 h), matching DIN V 18599-2 (heavy class: 468 kJ/m²K floor-referenced) and
+DIN V 4108-6 (≈ 560). The ISO 13790 class value (heavy, 260) is a monthly-method
+convention that sits far too low for massive construction — it was the single
+cause of the 2× overnight discrepancy. The derivation and its side effects were
+adversarially verified (independent RK4 re-derivation; norm/literature check;
+repo audit confirming steady states and balancing presets are capacity-invariant).
 
 ## References
 

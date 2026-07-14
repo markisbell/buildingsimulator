@@ -75,12 +75,13 @@ Why this matters (field signatures the quasi-static model could not produce):
 ![Effect of radiator storage on heat-up and cooldown](figures/radiator_dynamics_ab.png)
 
 *Fig. 1 — Heat-up (top) and cooldown (bottom) with quasi-static (left) vs dynamic
-(right) radiators. With storage: S-start at the boost, radiator power decaying over
-≈ 1.5 h after the 22:00 setback (first-hour cooling −1.5 vs −1.8 K/h), the ideal PI
+(right) radiators, measured at the pre-night-mass calibration (C_mass = 260); the
+signatures persist at 450. With storage: S-start at the boost, radiator power
+decaying over ≈ 1.5 h after the 22:00 setback, the ideal PI
 undershooting-and-wobbling at the night setpoint against the emission lag, and the
 eTRV's fast sawtooth chatter turning into the slow charge/discharge cycles seen in
-field recordings. Signature shifts: overheating +25 % (ideal) / +40 % (eTRV),
-radiator flow CV 0.80 → 1.07, burner starts 83 → 73 per day.*
+field recordings. Signature shifts at that revision: overheating +25 % (ideal) /
++40 % (eTRV), radiator flow CV 0.80 → 1.07, burner starts 83 → 73 per day.*
 
 **Numerical history:** the radiator originally ran steady-state because water states
 at trickle flows destabilized the co-simulation solver. That failure mode was since

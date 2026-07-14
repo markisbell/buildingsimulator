@@ -31,6 +31,26 @@ docker compose -p buildingsim up -d
 cd ui; npm install; npm run dev        # React dashboard at http://localhost:5173
 ```
 
+## Alternative: Docker-free toolchain in WSL
+
+If Docker Desktop is unavailable (e.g. its Windows service needs an admin start),
+the same toolchain runs directly in a per-user WSL distro — no admin rights needed:
+
+```powershell
+wsl --install -d Ubuntu-24.04 --no-launch
+wsl -d Ubuntu-24.04 -u root -- bash -c "tr -d '\r' < /mnt/c/<repo-path>/scripts/wsl_toolchain_setup.sh | bash"
+
+# then build/run exactly like the docker variant, e.g.:
+wsl -d Ubuntu-24.04 -u root -- bash -c "cd /work/build && omc /work/modelica/build_80s.mos"
+wsl -d Ubuntu-24.04 -u root -- bash -c "cd /work/sil && /opt/silenv/bin/python3 run_design_day.py"
+```
+
+The setup script installs OpenModelica (apt stable), Modelica Buildings 13.0.0 and a
+Python venv at `/opt/silenv`, and links the repo at `/work` so the `.mos` build
+scripts work unchanged. If WSL has no network (campus NAT policies), put
+`networkingMode=mirrored` under `[wsl2]` in `%UserProfile%\.wslconfig` and run
+`wsl --shutdown` once. The Grafana/BOPTEST stack still requires Docker.
+
 Division of labor: the **React dashboard** is the experiment workbench (building view,
 run catalog, KPI board, device inspector); **Grafana** (http://localhost:3001,
 provisioned "buildingsimulator runs" dashboard, Infinity datasource reading the same

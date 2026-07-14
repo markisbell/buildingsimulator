@@ -42,17 +42,24 @@ G_wall = 1.1 · U_wall·A_wall (+ floor position extras, to mass node)
 | Kitchen | 10.6 | 5.0 | +3.7 | +4.8 |
 | Bath | 5.6 | 3.7 | +2.2 | +2.9 |
 
-Thermal mass (ISO 13790 "heavy"): C_mass = 260 kJ/(m²K)·A. The air node is **not an
-empty room**: C_air = **40 kJ/(m²K)·A** ≈ 13× bare air, lumping furniture, contents and
-the interior surface layers that move with the air (EnergyPlus zone-capacitance
-multiplier practice, typical 1-20; ISO 52016 surface-layer capacitance; the empty-room
-assumption is invalid for dynamic calculations —
-[Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145)). Air↔surfaces
-G_int = **15.5 W/(m²K)·A** per the ISO 13790 convention (h_is·A_t = 3.45 W/(m²K) ×
-4.5·A_floor). Both calibrated after the cooldown analysis in
-[heatup-dynamics.md](heatup-dynamics.md): the resulting fast time constant
+Thermal mass: C_mass = **450 kJ/(m²K)·A** — the *night-accessible* capacity of this
+masonry + concrete-slab construction (bottom-up: two half-thickness RC slabs alone
+≈ 430 kJ/m²K, plus wall shares, all within the ~10-14 cm that heat penetrates in
+8 h; DIN V 18599-2 heavy class 468 kJ/m²K floor-referenced, DIN V 4108-6 ≈ 560.
+The ISO 13790 class value of 260 is a monthly-method convention that made overnight
+free cooling run 2× faster than field records — calibration in
+[heatup-dynamics.md §6](heatup-dynamics.md) and `sil/calibrate_deep_mass.py`).
+The air node is **not an empty room**: C_air = **40 kJ/(m²K)·A** ≈ 13× bare air,
+lumping furniture, contents and the interior surface layers that move with the air
+(EnergyPlus zone-capacitance multiplier practice, typical 1-20; ISO 52016
+surface-layer capacitance; the empty-room assumption is invalid for dynamic
+calculations — [Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145)).
+Air↔surfaces G_int = **15.5 W/(m²K)·A** per the ISO 13790 convention (h_is·A_t =
+3.45 W/(m²K) × 4.5·A_floor). The resulting fast time constant
 τ = C_air/(G_win+G_int) ≈ **41 min** matches grey-box identification of furnished rooms
-([Bacher & Madsen 2011](https://doi.org/10.1016/j.enbuild.2011.02.005), 0.5-2 h). Room-hall doors 15 W/K each; hall→stairwell
+([Bacher & Madsen 2011](https://doi.org/10.1016/j.enbuild.2011.02.005), 0.5-2 h);
+the slow constant ≈ 70-80 h gives the corridor-verified −0.25 K/h free-cool tail.
+Room-hall doors 15 W/K each; hall→stairwell
 10 W/K at 15 °C. Vertical slab coupling 1.7 W/(m²K)·A per stack.
 
 ## 4. Design loads and radiator sizing (DIN-style, -12 °C, rooms 20 °C, bath 24 °C)
@@ -143,11 +150,11 @@ the 20 K spread = radiator flow / 1.3). Verified (all PASS):
   P-control offsets or non-oversized radiators.
 - Operating benefit = fair flow distribution when all TRVs demand maximum: with
   realistic as-built ring scatter (43 % flow deviation), morning-recovery deficit
-  spread across rooms is 1.59 K; after balancing 1.26 K
+  spread across rooms is 2.25 K; after balancing 1.89 K
   (`results/balancing_80s.png`). Real imbalance enters through the as-built ring
-  positions, which the seeded scatter represents. (The 1.3× sizing also shrinks the
-  absolute deficits: recovery is faster everywhere, so unfairness has less time to
-  accumulate than at the previous 1.15× sizing.)
+  positions, which the seeded scatter represents. (This recovery benchmark is
+  deliberately **boost-free** — pure hydraulics; with the calibrated night mass
+  the deficits at boost+3 h are correspondingly larger than at C_mass = 260.)
 
 Baseline states for control experiments: **as-built** (scattered rings), **open rings**
 (idealized-unbalanced), **balanced** (`results/presets_80s.json`).
@@ -159,14 +166,14 @@ Real measurement traces oscillate; the model now reproduces the mechanisms
 
 - **Two-point boiler** (`sil/boiler.py`, SIL supervisory logic through `TSupSet`):
   ±5 K hysteresis, 4-min minimum runtimes, 80 l boiler water mass → supply sawtooth
-  19.4 K pk-pk, 73 burner starts/day (~3/h, era-typical; the dynamic radiator
+  19.0 K pk-pk, 73 burner starts/day (~3/h, era-typical; the dynamic radiator
   storage filters the load the boiler sees and lengthened the cycles).
 - **Riser water columns** (6 l per stack base, shaft losses 6 W/K) → transport lag of
   the supply front.
 - **Stochastic internal gains** (`sil/gains.py`, seeded): occupancy blocks, cooking and
   bath bursts, appliance noise, 1-2 window-opening cold pulses per room and day
   → room ripple 0.05 K (detrended std; the C_air = 40 kJ/(m²K) fast node filters
-  gain noise strongly), radiator flow CV 1.07 with the eTRV staircase/chatter
+  gain noise strongly), radiator flow CV 1.05 with the eTRV staircase/chatter
   pattern of field data. The flow CV rose from 0.80 when the radiator storage was
   enabled — the emission lag strengthens TRV limit cycling, exactly the
   destabilization the quasi-static model was documented to underestimate.
