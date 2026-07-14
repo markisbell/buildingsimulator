@@ -121,7 +121,9 @@ def run_simulation(fmu_path, controllers, scenario, duration, control_dt,
         fmu.set_inputs({**exo, **actions})
 
         if t >= next_record:
-            record = {"time": t, **meas, **actions, **exo}
+            # actions last: a supervisory controller (e.g. TSupSet boost)
+            # overrides the exogenous value at the FMU, so record likewise
+            record = {"time": t, **meas, **exo, **actions}
             records.append(record)
             if on_record:
                 on_record(record)
