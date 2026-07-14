@@ -75,12 +75,12 @@ inside the range certified heads exhibit.
 | Physical effect | Where modeled | Parameter |
 |---|---|---|
 | Quick-opening characteristic incl. dead zone | FMU: `TwoWayTable` | `yCha`/`phiCha` in `ApartmentBranch` (anchor: 80 % flow at 30 % stroke) |
-| Seat leakage ~0.04 % | FMU | `phiCha[1] = 4e-4` |
+| Seat leakage / dead-zone floor 0.15 % | FMU | `phiCha[1] = 1.5e-3` — raised from the rubber-seal-tight 0.04 % as a solver-robustness floor at trickle flows (building80s-parameters.md §8); a few watts per closed radiator |
 | Q = kv·√Δp, authority, riser interaction | FMU: pressure/flow network | `dpValve_nominal = 10 kPa`, `dpFixed = 2 kPa` |
 | Motor travel time | SIL harness: rate limit on `yVal` commands (was an in-FMU filter; its states form a failing dynamic state set with the branch pressure drops now that radiators carry water states — radiator-modeling.md §3) | 60 s full stroke |
 | Backlash/hysteresis (0.1 mm ≈ 0.45 K) | Python device model | `backlash_mm` |
 | Closing-point calibration error | Python device model | `calibration_offset_mm` |
-| Presetting rings | not separate — `dpValve_nominal` sizing plays this role at design flow | — |
+| Presetting rings + riser balancing valves | FMU: separate linear valves, positions as FMU inputs (`yPreset[k]`, `yBalance[s]`) | building80s-parameters.md §7; balanced/as-built/open baseline states |
 | Δp force on closing point | not modeled (limitation) | — |
 
 Verification: `sil/run_valve_sweep.py` (realized flow vs stroke incl. dead zone,

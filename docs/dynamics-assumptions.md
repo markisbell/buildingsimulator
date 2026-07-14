@@ -18,7 +18,7 @@ quasi-statically:
 | Valve/actuator | — (60 s stroke rate-limited harness-side) | flow–pressure relation |
 | Hydraulic network | — | algebraic pressure/flow solution |
 | Distribution | riser water column (1 per stack), boiler water mass | pipes, return side, pump volume |
-| Devices (Python) | sensor-bias lag, integrators, relay states | — |
+| Devices (Python) | sensor-bias lag, integrators, relay + boost states (incl. Schnellaufheizung supply boost) | — |
 
 ## 2. The room: 2R2C with a deliberately "thick" fast node
 
@@ -28,7 +28,7 @@ $$C_{mass}\dot T_{mass} = \dot Q_{rad} + G_{int}(T_{air}-T_{mass}) + G_{wall}(T_
 | Parameter | Value | Assumption it encodes |
 |---|---|---|
 | $C_{air}$ | 40 kJ/(m²K)·A | the fast node is **not bare air** (×13 multiplier): furniture, contents and interior surface layers move with the air (EnergyPlus multiplier practice 1–20; ISO 52016 surface-layer capacitance; [Johra & Heiselberg 2017](https://doi.org/10.1016/j.rser.2016.11.145)) |
-| $C_{mass}$ | 260 kJ/(m²K)·A | ISO 13790 "heavy" class — the *effective* storage participating in daily cycles, not the full masonry mass |
+| $C_{mass}$ | 450 kJ/(m²K)·A | night-accessible capacity of masonry + concrete-slab construction (bottom-up inventory; DIN V 18599-2 heavy class 468, DIN V 4108-6 ≈ 560). The ISO 13790 class value (heavy, 260) is a monthly-method convention that made free cooling 2× faster than field records — calibration: sil/calibrate_deep_mass.py, heatup-dynamics.md §6 |
 | $G_{int}$ | 15.5 W/(m²K)·A | ISO 13790 convention $h_{is}\!\cdot\!A_t = 3.45 \times 4.5\,A_{floor}$ — combined convective+radiative surface film, constant (no $h(\Delta T)$ or airflow dependence) |
 | $G_{win}, G_{wall}$ | per IWU U-values | infiltration constant at n = 0.7 h⁻¹ (no wind/stack effects, no window-opening geometry — openings appear as negative gain pulses) |
 | $f_{air}$ | 0.3 | fixed split of solar/internal gains to air vs surfaces |
@@ -36,7 +36,8 @@ $$C_{mass}\dot T_{mass} = \dot Q_{rad} + G_{int}(T_{air}-T_{mass}) + G_{wall}(T_
 Resulting time constants (per design): $\tau_{fast} = C_{air}/(G_{win}+G_{int}) \approx$
 **41 min** (matches grey-box identification of furnished rooms,
 [Bacher & Madsen 2011](https://doi.org/10.1016/j.enbuild.2011.02.005): 0.5–2 h);
-$\tau_{slow} \approx (C_{air}+C_{mass})/UA_{eff} \approx$ **40 h**. This two-constant
+$\tau_{slow} \approx (C_{air}+C_{mass})/UA_{eff} \approx$ **70-80 h** → overnight
+free-cool tail ≈ −0.3 K/h, inside the field corridor. This two-constant
 structure — not any single τ — produces the observed heat-up/cooldown shapes.
 
 **Not modeled, by intent:** air stratification and radiator-proximity effects (single
@@ -45,14 +46,14 @@ instead), moisture/latent loads, variable convection coefficients, furniture as 
 separate third node, solar distribution by geometry (fixed split), door opening/closing
 dynamics (constant $G_{door}$ = 15 W/K).
 
-**Documented borderline case — no deep wall mass:** $C_{mass}$ is the ISO
-*daily-effective* capacity; the layers of the masonry deeper than ~10 cm carry no
-state. Consequence, quantified against field records: multi-hour free cooling runs
-≈ 2× too fast (first hour −0.79 K/h vs measured ≈ −0.2…−0.4 K/h), while daily
-dynamics and steady states are calibrated. Initialization, synchronized-setback
-protocol and radiator storage were tested and eliminated as causes
-(heatup-dynamics.md §6, `sil/run_neighbor_test.py`). Planned resolution: a third
-(deep-mass) node calibrated to a measured overnight cooldown.
+**Resolved (night-mass calibration):** the model originally used the ISO 13790
+"heavy" convention $C_{mass}$ = 260 kJ/(m²K), which made multi-hour free cooling
+run ≈ 2× faster than field records. Initialization, the synchronized-setback
+protocol and the radiator storage were tested and eliminated as causes; a
+weakly-coupled deep-mass third node was a null result. The corridor is met by the
+strongly-coupled night-accessible capacity (450) plus the Schnellaufheizung boost
+that keeps morning recovery fast (heatup-dynamics.md §6,
+`sil/calibrate_deep_mass.py`, `sil/run_neighbor_test.py`).
 
 ## 3. The radiator: EN 442 characteristic with water/steel storage
 
@@ -93,7 +94,9 @@ quasi-static emission underestimates limit cycles.
 ## 5. Distribution and plant
 
 - **Boiler water mass 80 l** (state) + two-point burner relay (±5 K, min runtimes)
-  → the 10–30 min supply sawtooth.
+  → the 10–30 min supply sawtooth. The supervisory layer adds the era's
+  **Schnellaufheizung** (+12 K on the heating curve inside a morning boost window
+  until rooms recover, `sil/boiler.py`).
 - **Riser water column, one 6 l volume per stack at the base** (state): transport lag
   of the supply front, with shaft heat loss. *Per-floor* transport lag and the return
   side are lumped away (mid-riser volumes destabilized the solver; the approximation
@@ -111,15 +114,14 @@ quasi-static emission underestimates limit cycles.
 | ≈ 8–25 min | riser transport, boiler mass + relay | 9 volumes + relay logic |
 | ≈ 30–50 min | radiator emission lag (water + steel) | 5 states per radiator |
 | ≈ 41 min | zone fast node (air + contents + surface layers) | state |
-| ≈ 40 h | zone structural mass | state |
+| ≈ 70–80 h | zone structural mass (night-accessible capacity) | state |
 
 Each quasi-static simplification sits at least a factor ~3 below the next modeled
 scale. The former borderline case — the radiator emission lag — is a modeled state
 since the field-realism revision (§3); that the radiator and zone fast node share a
 time scale is physical, and exactly the interaction that makes TRV loops hard. The
-current documented gap sits at the *slow* end instead: the zone mass has no deep
-layer, so multi-hour free cooling runs ≈ 2× faster than field records (§2,
-heatup-dynamics.md §6).
+former slow-end gap (free cooling 2× faster than field records) is closed by the
+night-mass calibration (§2, heatup-dynamics.md §6).
 
 ## References
 

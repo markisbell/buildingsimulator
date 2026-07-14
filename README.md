@@ -31,6 +31,26 @@ docker compose -p buildingsim up -d
 cd ui; npm install; npm run dev        # React dashboard at http://localhost:5173
 ```
 
+## Alternative: Docker-free toolchain in WSL
+
+If Docker Desktop is unavailable (e.g. its Windows service needs an admin start),
+the same toolchain runs directly in a per-user WSL distro — no admin rights needed:
+
+```powershell
+wsl --install -d Ubuntu-24.04 --no-launch
+wsl -d Ubuntu-24.04 -u root -- bash -c "tr -d '\r' < /mnt/c/<repo-path>/scripts/wsl_toolchain_setup.sh | bash"
+
+# then build/run exactly like the docker variant, e.g.:
+wsl -d Ubuntu-24.04 -u root -- bash -c "cd /work/build && omc /work/modelica/build_80s.mos"
+wsl -d Ubuntu-24.04 -u root -- bash -c "cd /work/sil && /opt/silenv/bin/python3 run_design_day.py"
+```
+
+The setup script installs OpenModelica (apt stable), Modelica Buildings 13.0.0 and a
+Python venv at `/opt/silenv`, and links the repo at `/work` so the `.mos` build
+scripts work unchanged. If WSL has no network (campus NAT policies), put
+`networkingMode=mirrored` under `[wsl2]` in `%UserProfile%\.wslconfig` and run
+`wsl --shutdown` once. The Grafana/BOPTEST stack still requires Docker.
+
 Division of labor: the **React dashboard** is the experiment workbench (building view,
 run catalog, KPI board, device inspector); **Grafana** (http://localhost:3001,
 provisioned "buildingsimulator runs" dashboard, Infinity datasource reading the same
@@ -60,6 +80,7 @@ highlighted).
 | `sil/actuator.py` | Valve actuator mechanics: pin force (spring/seal/friction/Δp), motor current with noise+ADC, backlash, unknown mechanical zero |
 | `sil/kpi.py` | Discomfort (K·h), boiler/pump energy, valve travel KPIs |
 | `sil/scenario_common.py` | Shared weather, heating curve, occupancy schedules, winter scenario factory |
+| `sil/boiler.py` | Supervisory boiler logic: two-point burner relay (era on/off cycling) + Schnellaufheizung morning boost (+12 K on the curve until rooms recover) |
 | `sil/solar.py` | Facade solar gains via pvlib (clear-sky + cloudiness, per-apartment orientation) |
 | `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |
 | `sil/run_thermostat_comparison.py` | Ideal PI vs realistic eTRV on identical scenario, KPI table |
@@ -73,11 +94,13 @@ highlighted).
 
 ## Multi-tenant building model
 
-`BuildingSimulator.MultiTenantBuilding`: ideal boiler + constant-speed pump feed a
-vertical two-pipe riser; on every floor `nApeFlo` apartment branches tap off (EN 442-2
-radiator behind an equal-percentage valve, single-capacity zone). Floor and apartment
-counts are compile-time parameters (`.\scripts\build_multitenant_fmu.ps1 -Floors N
--ApartmentsPerFloor M`).
+`BuildingSimulator.MultiTenantBuilding`: setpoint-tracking boiler (+80 l water mass)
+and constant-speed pump feed a vertical two-pipe riser; on every floor `nApeFlo`
+apartment branches tap off (EN 442-2 radiator with dynamic water/steel storage behind
+a quick-opening TRV insert, 2R2C zone). Supply-side supervisory logic — outdoor-reset
+curve, two-point burner cycling, Schnellaufheizung boost — lives in Python
+(`sil/boiler.py`). Floor and apartment counts are compile-time parameters
+(`.\scripts\build_multitenant_fmu.ps1 -Floors N -ApartmentsPerFloor M`).
 
 FMU inputs: `yVal[i]`, `QGain[i]` (solar + internal gains) per apartment, `TOut`, `TSupSet`.
 FMU outputs: `TRoom[i]`, `mFlow[i]`, `QRad[i]`, `dpVal[i]`, `TSup`, `TRet`, `QBoi`, `PPum`.
@@ -101,11 +124,14 @@ Effects central to distributed thermostat control that are built in:
 
 ### Valve realism (German M30 x 1.5 TRV inserts, 1.5 mm pin stroke)
 
-- **In the FMU** (plant hydraulics): table-based flow characteristic
-  (`Buildings.Fluid.Actuators.Valves.TwoWayTable`) with a sealing dead zone up to
-  ~20 % stroke (elastomer seal), a steep quasi-linear rise, and saturation above
-  ~60 % lift; seat leakage 0.04 % of Kvs. Table is a model parameter (`yCha`/`phiCha`
-  in `ApartmentBranch`). 60 s full-stroke actuator filter models the eTRV motor.
+- **In the FMU** (plant hydraulics): table-based quick-opening flow characteristic
+  (`Buildings.Fluid.Actuators.Valves.TwoWayTable`, anchored to Danfoss RA-N data:
+  ~80 % flow at 30 % stroke) with a sealing dead zone up to ~6 % stroke (elastomer
+  seal) and a leakage floor of 0.15 % of Kvs (numerical robustness at trickle flows).
+  Table is a model parameter (`yCha`/`phiCha` in `ApartmentBranch`). The 60 s
+  full-stroke motor speed is enforced as a rate limit in the SIL harness — not as an
+  in-FMU filter, whose states clash with the dynamic radiators via state selection
+  (see docs/radiator-modeling.md §3).
 - **In the device model** (`sil/thermostat.py`): 0.1 mm mechanical play between motor
   command and pin position — opening and closing paths differ (hysteresis) — plus an
   optional calibration-offset error. Verified by `sil/run_valve_sweep.py`.
@@ -128,7 +154,8 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 2. ✅ Parameterizable multi-tenant model: N floors × M apartments, riser network, central plant
 3. ✅ Thermostat realism: sampled control, valve-mounted sensor bias, actuation deadband, battery KPIs
 4. ✅ Verified 1980s German MFH (`Building80s`): room-resolved (living/bedroom/kitchen/bath + hall),
-   IWU-typology envelope, 90/70 system, per-stack risers — design-day verified at 56 W/m²
+   IWU-typology envelope, 90/70 system, per-stack risers — design-day verified at 65 W/m²,
+   overnight cooldown calibrated to the field corridor (−0.2…−0.4 K/h)
    ([parameters + results](docs/building80s-parameters.md))
 5. ✅ Manual valves (presetting rings + riser balancing as FMU inputs) with a damped
    proportional balancing routine — as-built / open / balanced baseline states
