@@ -179,7 +179,7 @@ class ElectronicThermostat:
         if self._last_sample is None or t - self._last_sample >= self.sample_interval:
             self._last_sample = t
             self.sensor_log.append((t, measurements[self.temp_output], T_sensed))
-            command = self.algorithm.step(t, T_sensed)
+            command = self._shape_command(t, self.algorithm.step(t, T_sensed))
             # reposition only if worth the battery (or hitting an end stop)
             if self._worth_moving(t, command):
                 self.n_moves += 1
@@ -193,3 +193,9 @@ class ElectronicThermostat:
         (sil/strategies.py) override this."""
         return (abs(command - self._position) >= self.position_deadband
                 or (command in (0.0, 1.0) and command != self._position))
+
+    def _shape_command(self, t, command):
+        """Command-shaping hook between algorithm and battery policy —
+        stock firmware passes through; coordination strategies
+        (sil/strategies.py) override this."""
+        return command

@@ -51,11 +51,19 @@ class _CompensatedAlgorithm:
 
 class BiasCompensatingThermostat(ElectronicThermostat):
     def __init__(self, *args,
-                 comp_alpha=0.4,        # learning rate per night anchor
+                 comp_alpha=0.5,        # learning rate per night anchor
                  comp_k_init=0.0,       # K bias at full heat proxy, initial
                  comp_k_max=3.0,        # K, sanity clamp
-                 anchor_settle_s=2700.0,   # bias fully decayed after this
-                 anchor_slope_s=1800.0,    # window to measure true cooling
+                 # The settle window must span the RADIATOR STORAGE
+                 # discharge, not just the 600 s sensor lag: after closure
+                 # the valve body keeps tracking the stored-heat emission
+                 # (tau_e ~ 30-50 min, radiator-modeling.md section 3).
+                 # With a 45-min window the estimator attributes the
+                 # residual warm-body drop to room cooling and learns
+                 # k ~ 0 on 90/70 era radiators (found in the coordinated-
+                 # recovery experiment).
+                 anchor_settle_s=5400.0,   # bias + storage decayed (1.5 h)
+                 anchor_slope_s=3600.0,    # window to measure true cooling
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.comp_alpha = comp_alpha
@@ -182,6 +190,92 @@ class BatteryAwareThermostat(BiasCompensatingThermostat):
         if move and command == 0.0:
             self._closed_at = t
         return move
+
+
+class RecoveryCoordinator:
+    """The radio channel of a distributed eTRV swarm: every device reports
+    its control deficit each firmware sample; the swarm exposes the worst
+    recent deficit. No central intelligence — just a shared blackboard,
+    which is exactly what commercial eTRV ecosystems (hub broadcast) offer."""
+
+    def __init__(self, stale_s=900.0):
+        self.stale_s = stale_s
+        self._reports = {}
+
+    def report(self, name, t, deficit):
+        self._reports[name] = (t, deficit)
+
+    def worst(self, t):
+        vals = [d for (tr, d) in self._reports.values()
+                if t - tr <= self.stale_s]
+        return max(vals) if vals else 0.0
+
+
+class ConsiderateRecoveryThermostat(BatteryAwareThermostat):
+    """Strategy 4 — distributed considerate recovery, stacked on 1 + 2.
+
+    In the as-built (scattered presetting rings) building, all valves open
+    fully during morning recovery; the hydraulically favored rooms arrive
+    first and keep drawing full flow while their PI slowly unwinds —
+    starving the weak rooms (recovery-deficit spread 2.25 K in the
+    balancing benchmark).
+
+    Policy: once a device has essentially arrived (own deficit below
+    own_arrived_K) while any peer still reports a deficit above
+    peer_needy_K, it caps its opening at y_cap — releasing differential
+    pressure to the laggards. The cap lifts (hysteresis) once the worst
+    peer deficit falls below peer_release_K. y_cap = 0.20 sits above the
+    steady-state working point (~0.15), so the arrived room loses nothing;
+    with the quick-opening insert the freed head is what matters.
+    """
+
+    def __init__(self, *args, coordinator=None, own_arrived_K=0.3,
+                 peer_needy_K=0.8, peer_release_K=0.5, y_cap=0.25,
+                 day_start_h=None, cap_window_h=3.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.coordinator = coordinator
+        self.own_arrived_K = own_arrived_K
+        self.peer_needy_K = peer_needy_K
+        self.peer_release_K = peer_release_K
+        self.y_cap = y_cap
+        # capping only during the morning contention window: outside it a
+        # never-arriving peer (e.g. badly under-learned bias) would keep
+        # everyone capped all day (finding of the first experiment round)
+        self.day_start_h = day_start_h
+        self.cap_window_h = cap_window_h
+        self._capping = False
+        self.cap_time_s = 0.0        # diagnostic: total time spent capped
+        self._last_shape_t = None
+
+    def _compensate(self, t, T_sensed):
+        T_comp = super()._compensate(t, T_sensed)
+        if self.coordinator is not None:
+            self.coordinator.report(self.temp_output, t, self.last_error_K)
+        return T_comp
+
+    def _shape_command(self, t, command):
+        if self.coordinator is None:
+            return command
+        if self.day_start_h is not None:
+            hour = (t % 86400.0) / 3600.0
+            if not (self.day_start_h <= hour
+                    < self.day_start_h + self.cap_window_h):
+                self._capping = False
+                self._last_shape_t = t
+                return command
+        worst = self.coordinator.worst(t)
+        arrived = self.last_error_K < self.own_arrived_K
+        if self._capping:
+            self._capping = arrived and worst > self.peer_release_K
+        else:
+            self._capping = arrived and worst > self.peer_needy_K
+        if self._capping:
+            if self._last_shape_t is not None:
+                self.cap_time_s += t - self._last_shape_t
+            self._last_shape_t = t
+            return min(command, self.y_cap)
+        self._last_shape_t = t
+        return command
 
 
 class OptimalStartThermostat(BatteryAwareThermostat):
