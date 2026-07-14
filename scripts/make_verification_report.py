@@ -165,7 +165,7 @@ Bottom: sensor reading vs true room temperature. Script: <code>run_thermostat_co
 <h2>Commissioning state and the operating benefit</h2>
 <table>
 <tr><th>Criterion</th><th>Target</th><th>Measured</th><th></th></tr>
-<tr><td>Commissioning flows (TRVs open)</td><td class="num">± 5 % of demand</td><td class="num">worst 3.4 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Commissioning flows (TRVs open)</td><td class="num">± 5 % of demand</td><td class="num">worst 3.5 %</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Commissioning return</td><td class="num">≈ 70 °C</td><td class="num">63.4 °C</td><td><span class="pass">PASS</span></td></tr>
 <tr><td>Recovery-deficit spread vs as-built rings</td><td class="num">reduced</td><td class="num">2.25 K → 1.89 K</td><td><span class="pass">PASS</span></td></tr>
 </table>
@@ -190,7 +190,7 @@ Script: <code>run_balancing.py</code>, presets in <code>results/presets_80s.json
 <tr><td>Radiator flow fluctuation (CV)</td><td class="num">&gt; 0.1</td><td class="num">1.05</td><td><span class="pass">PASS</span></td></tr>
 </table>
 <figure><img src="data:image/png;base64,@@IMG_OSC@@" alt="Oscillation traces">
-<figcaption>Day 2, 06–12 h: supply sawing on ~15-minute burner cycles; room temperatures dipping
+<figcaption>Day 2, 06–12 h: supply sawing on ~20-minute burner cycles; room temperatures dipping
 on window-opening events and drifting with solar; the eTRV flow staircase with bursts and
 chatter; burner duty blocks. Script: <code>run_oscillation_check.py</code>.</figcaption></figure>
 </section>

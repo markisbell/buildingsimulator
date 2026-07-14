@@ -167,7 +167,9 @@ Real measurement traces oscillate; the model now reproduces the mechanisms
 - **Two-point boiler** (`sil/boiler.py`, SIL supervisory logic through `TSupSet`):
   ±5 K hysteresis, 4-min minimum runtimes, 80 l boiler water mass → supply sawtooth
   19.0 K pk-pk, 73 burner starts/day (~3/h, era-typical; the dynamic radiator
-  storage filters the load the boiler sees and lengthened the cycles).
+  storage filters the load the boiler sees and lengthened the cycles). The same
+  module carries the Schnellaufheizung morning boost (+12 K window after the
+  schedule day-start, heatup-dynamics.md §2/§6).
 - **Riser water columns** (6 l per stack base, shaft losses 6 W/K) → transport lag of
   the supply front.
 - **Stochastic internal gains** (`sil/gains.py`, seeded): occupancy blocks, cooking and
