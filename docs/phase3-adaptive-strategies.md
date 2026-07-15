@@ -1,5 +1,9 @@
 # Phase 3 — Adaptive eTRV control strategies: results
 
+> *Developed with Claude Code (Anthropic) as a coding agent under human
+> direction — see the AI-assisted development disclaimer in the
+> [README](../README.md).*
+
 The research phase this simulator was built for: can the comfort and battery
 penalties of realistic electronic radiator thermostats be recovered by better
 firmware — individually (adaptive) and collectively (distributed)? Four

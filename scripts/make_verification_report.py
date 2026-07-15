@@ -279,7 +279,10 @@ Scripts: <code>run_oscillation_check.py [dt]</code>, <code>compare_dt.py</code>.
 
 <footer>Reproduce any figure: <code>docker run --rm -v ${PWD}:/work -w /work/sil
 buildingsimulator:dev python3 &lt;script&gt;.py</code> · parameter derivation with sources in
-<code>docs/building80s-parameters.md</code> · github.com/markisbell/buildingsimulator</footer>
+<code>docs/building80s-parameters.md</code> · github.com/markisbell/buildingsimulator<br>
+Developed with Claude Code (Anthropic) as a coding agent under human direction; every claim
+is backed by a reproducible script, but AI-generated content may contain errors — independent
+review is advised before relying on quantitative results.</footer>
 </div>
 """
 
