@@ -208,6 +208,44 @@ All numbers in this document are measured with the final firmware
 (conservative three-window estimator, factory prior) — one consistent
 revision across all four rungs.
 
+## 7. Postscript: can RL learn the compensation? (yes)
+
+With the gym environment's device-observation mode in place, the question
+became testable: an agent rewarded on **true** comfort but observing only the
+biased sensor — the partially observed setting a real deployment lives in
+minus the reward oracle. The FMU sample budget (~10 min per episode) rules
+out deep RL, so the simplest honest formulation was used: derivative-free
+episodic policy search over a structured policy — per-zone PI on
+$T_{sensed} - \theta\,u_{filt}$ with the heat-proxy feature given and only
+the gain $\theta$ learned from reward (`sil/run_rl_bias.py`, 12 episodes
+total, common random numbers across candidates).
+
+![RL bias compensation](figures/rl_bias.png)
+
+*Fig. 4 — Left: the reward landscape over θ is smooth and single-peaked;
+the learned optimum (θ = 1.25) sits at the lower edge of the engineered
+night-anchor's k̂ range. Right: true-temperature tracking — the learned
+policy recovers ≈ 90 % of the observability gap to the plant-observation
+bound (−0.40 K vs −1.42 K uncompensated vs −0.08 K).*
+
+Three observations:
+
+1. **The compensation is learnable from reward alone** — no anchor
+   cleverness, no closure detection: twelve episodes of blind search find
+   the gain the engineered firmware needed identifiability analysis to
+   estimate.
+2. **The reward architecture avoids the over-compensation trap
+   automatically**: the energy term rises monotonically with θ (533 → 637
+   kWh across the grid), so the optimum sits slightly *below* the
+   bias-neutral gain — the same conservative lesson the engineered
+   estimator had to learn the hard way (§5, round 6) emerges from the
+   reward structure for free.
+3. **The two approaches are complementary, not competing**: the RL route
+   needs the true-comfort reward (a luxury of simulation — unmeasurable in
+   a real flat); the night-anchor needs only device-local data but pays in
+   estimator complexity. A field-ready synthesis would train θ in
+   simulation and refine with anchors in situ.
+
 ## Reproduction
 
 | Result | Script |
@@ -217,6 +255,7 @@ revision across all four rungs.
 | Rung 4 fairness experiment | `sil/run_coordinated_recovery.py` |
 | Estimator unit probe | `sil/test_strategies.py` |
 | Opening-vs-flow evidence | `scripts/make_flow_evidence.py` |
+| RL bias-compensation search | `sil/run_rl_bias.py` |
 
 All runs land in the run store (`runs/`) and the leaderboard; baselines are
 the `cmp_ideal` / `cmp_realistic` runs of `sil/run_thermostat_comparison.py`.
