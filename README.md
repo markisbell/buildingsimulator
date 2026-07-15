@@ -9,6 +9,26 @@ with valves**. Used as software-in-the-loop (SIL) feedback for investigating con
 strategies of electronic radiator thermostats: adaptive control of individual
 thermostats and distributed control of all thermostats in the building.
 
+**Intended use: control engineering teaching and algorithm development.** The
+plant is a verified, field-calibrated nonlinear multivariable system with realistic
+actuator and sensor imperfections — a working testbed for the classic topics:
+
+- **Parameter estimation / system identification** — grey-box RC identification,
+  the night-anchor bias estimator (Prony-style partial-decay identification, with
+  documented under- and over-identification failure modes)
+- **Adaptive control** — self-calibrating thermostat firmware, learned lead times,
+  the full strategy ladder in [docs/phase3-adaptive-strategies.md](docs/phase3-adaptive-strategies.md)
+- **Nonlinear control** — quick-opening valve characteristics, EN 442 radiator
+  power law, coupled hydraulic networks, relay-driven plants and limit cycles
+- **Model predictive control / optimal start** — multi-time-constant recovery
+  dynamics, schedule anticipation, energy-comfort trade-offs with honest KPIs
+- **Reinforcement learning** — a validated Gymnasium interface (`sil/gym_env.py`)
+  with a device-realistic partial-observability mode
+
+Exercises can attack the plant at every level: FMU inputs directly, the eTRV
+device firmware (`sil/thermostat.py` / `sil/strategies.py`), the Gym environment,
+or the [BOPTEST](https://ibpsa.github.io/project1-boptest/) reference benchmark.
+
 > [!NOTE]
 > **AI-generated code.** This repository — code, models, experiments and
 > documentation — was developed with **Claude Code (Anthropic) acting as a
