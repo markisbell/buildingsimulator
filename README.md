@@ -1,21 +1,24 @@
 # buildingsimulator
 
+![AI-generated](https://img.shields.io/badge/source-AI--generated-8A2BE2)
+
 Simulation environment for a multi-tenant building with hydronic radiator heating,
 covering the full path **central heat generation → distribution → individual radiators
 with valves**. Used as software-in-the-loop (SIL) feedback for investigating control
 strategies of electronic radiator thermostats: adaptive control of individual
 thermostats and distributed control of all thermostats in the building.
 
-> **AI-assisted development disclaimer.** This repository — code, models,
-> experiments and documentation — was developed with **Claude Code (Anthropic)
-> acting as a coding agent** under human direction. The researcher set the
-> objectives, supplied domain knowledge and field observations (which drove
-> several model calibrations), reviewed intermediate results and made the
-> design decisions; the agent implemented, ran and documented the work.
-> Model parameters and behavior are backed by reproducible verification
-> scripts (see the docs and `results/`), but AI-generated content may contain
-> errors — independent review is advised before relying on quantitative
-> results. Commit-level attribution is recorded via `Co-Authored-By` trailers.
+> [!NOTE]
+> **AI-generated code.** This repository — code, models, experiments and
+> documentation — was developed with **Claude Code (Anthropic) acting as a
+> coding agent** under human direction. The researcher set the objectives,
+> supplied domain knowledge and field observations (which drove several model
+> calibrations), reviewed intermediate results and made the design decisions;
+> the agent implemented, ran and documented the work. Model parameters and
+> behavior are backed by reproducible verification scripts (see the docs and
+> `results/`), but AI-generated content may contain errors — independent
+> review is advised before relying on quantitative results. Commit-level
+> attribution is recorded via `Co-Authored-By` trailers.
 
 ## Stack
 
