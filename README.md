@@ -1,5 +1,6 @@
 # buildingsimulator
 
+![license](https://img.shields.io/badge/license-MIT-blue)
 ![AI-generated](https://img.shields.io/badge/source-AI--generated-8A2BE2)
 
 Simulation environment for a multi-tenant building with hydronic radiator heating,
