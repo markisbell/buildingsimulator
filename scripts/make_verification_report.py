@@ -19,6 +19,7 @@ IMAGES = {
     "IMG_ABDYN": "radiator_dynamics_ab.png",
     "IMG_CORRIDOR": "neighbor_test_80s.png",
     "IMG_DT": "dt_comparison_80s.png",
+    "IMG_BOPTEST": "boptest_benchmark.png",
 }
 
 TEMPLATE = """
@@ -85,7 +86,7 @@ footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
   <h1>Verification report — 1980s German multi-family building simulator</h1>
   <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
   3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
-  repo commit <b>HEAD</b> · 2026-07-14 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
+  repo commit <b>HEAD</b> · 2026-07-16 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
   furnished-room fast node (C<sub>air</sub> = 40 kJ/m²K, τ<sub>fast</sub> ≈ 41 min) ·
   night-accessible structural mass (C<sub>mass</sub> = 450 kJ/m²K, τ<sub>slow</sub> ≈ 70–80 h) ·
   radiators 1.3× design load (era sizing), dynamic water/steel storage (8 l + 30 kg per kW,
@@ -275,6 +276,42 @@ which relaxes rather than tightens the step-size requirement.</div>
 <figcaption>Day 2, 07–10 h: supply sawtooth and one radiator flow at both communication steps —
 identical amplitude, period and character; phases drift apart as expected.
 Scripts: <code>run_oscillation_check.py [dt]</code>, <code>compare_dt.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">9 · External benchmark — BOPTEST</div>
+<h2>Same firmware objects on the IBPSA reference plant</h2>
+<p>Cross-plant validation on <code>multizone_residential_hydronic</code> — an independently
+developed residential dwelling (gas boiler, five valve-equipped radiator zones plus a valveless
+hall) — over BOPTEST&rsquo;s standardized <code>peak_heat_day</code> scenario, scored by
+BOPTEST&rsquo;s own KPIs. The eTRV firmware runs unmodified; only the I/O wiring changes
+(<code>sil/boptest_adapter.py</code>). Boiler supply control stays at the test-case baseline in
+all cases, so the cases differ only in TRV behavior.</p>
+<table>
+<tr><th>Case</th><th>tdis_tot [K·h/zone]</th><th>ener_tot [kWh/m²]</th><th>cost_tot [€/m²]</th><th>emis_tot [kgCO₂/m²]</th></tr>
+<tr><td>BOPTEST baseline (embedded controller)</td><td class="num">21.41</td><td class="num">8.24</td><td class="num">0.81</td><td class="num">1.43</td></tr>
+<tr><td>plain PI on true zone temperature</td><td class="num">25.48</td><td class="num">8.23</td><td class="num">0.81</td><td class="num">1.43</td></tr>
+<tr><td>stock eTRV (biased valve sensor)</td><td class="num">69.66</td><td class="num">8.06</td><td class="num">0.80</td><td class="num">1.40</td></tr>
+<tr><td>ladder eTRV (Phase 3 firmware, unretuned)</td><td class="num">52.04</td><td class="num">8.23</td><td class="num">0.81</td><td class="num">1.43</td></tr>
+</table>
+<div class="finding"><em>Both central findings reproduce:</em> the stock firmware&rsquo;s
+sensor pathology costs <b>2.7×</b> the plain-PI discomfort (in-repo simulator: 2.1×) for a 2 %
+energy saving — the rooms simply run cold; the Phase 3 firmware recovers <b>40 % of the
+pathology gap at PI-equal energy</b>, with factory priors, on a plant it has never seen.
+BOPTEST&rsquo;s <code>tdis_tot</code> is <b>two-sided</b> (charges over- and undershoot), which
+closes the one-sided-KPI caveat documented for the in-repo ladder experiments: the recovery is
+not a warm-side metric artifact. Partial rather than full recovery is expected — the KPI window
+includes the estimator&rsquo;s learning nights, and the deliberate ~30 % under-correction
+transfers untuned.</div>
+<div class="finding"><em>Validation boundary:</em> BOPTEST validates the closed-loop
+<b>consequences</b> of the sensor pathology and its mitigation on an independent
+building/hydronics/weather model with third-party KPIs — not the bias magnitude itself, which
+remains part of our device model (driven here by BOPTEST&rsquo;s delivered-heat signal).</div>
+<figure><img src="data:image/png;base64,@@IMG_BOPTEST@@" alt="BOPTEST benchmark KPIs">
+<figcaption>BOPTEST KPIs for the four cases: thermal discomfort (left) and HVAC energy (right).
+Full KPI payloads in <code>results/boptest_benchmark.json</code>; method, interface mapping and
+reproduction steps in <code>docs/boptest-benchmark.md</code>. Scripts:
+<code>run_boptest_benchmark.py</code>, <code>make_boptest_figure.py</code>.</figcaption></figure>
 </section>
 
 <footer>Reproduce any figure: <code>docker run --rm -v ${PWD}:/work -w /work/sil
