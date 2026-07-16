@@ -125,7 +125,7 @@ highlighted).
 | `server/main.py` | FastAPI run-store API (`/api/runs`, `/manifest`, `/series`) |
 | `build/` | Compiled FMUs (generated) |
 | `results/` | Plots + CSV time series (generated) |
-| `docs/` | Research report, BOPTEST setup |
+| `docs/` | Research report, BOPTEST setup + benchmark results |
 
 ## Multi-tenant building model
 
@@ -205,5 +205,8 @@ that distributed thermostat control has to deal with (demonstrated in Scenario B
 8. ✅ Device-realistic observation mode (`observation_mode="device"`): agents observe through the
    eTRV valve-mounted sensor while the reward stays on true comfort — the
    learning-under-sensor-bias setting (validated: a sensed-obs PI reproduces the 1.4 K undershoot)
-9. Benchmarking against [BOPTEST](https://ibpsa.github.io/project1-boptest/)
-   `multizone_residential_hydronic` KPIs (requires Docker)
+9. ✅ Benchmarking against [BOPTEST](https://ibpsa.github.io/project1-boptest/)
+   `multizone_residential_hydronic`: the sensor-bias pathology and the ladder recovery
+   reproduce on the independent reference plant — the stock eTRV costs 2.7× the PI
+   discomfort, the Phase 3 firmware recovers 40 % of the gap at PI-equal energy,
+   scored by BOPTEST's own two-sided KPIs ([results](docs/boptest-benchmark.md))
