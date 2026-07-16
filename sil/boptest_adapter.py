@@ -20,7 +20,9 @@ ZONES = ["Liv", "Ro1", "Ro2", "Ro3", "Bth"]
 
 
 class BoptestClient:
-    def __init__(self, base="http://localhost:8081", testid=None,
+    # 127.0.0.1, NOT localhost: on Windows, Python tries ::1 first and only
+    # falls back to IPv4 after a ~21 s connect timeout — on EVERY request
+    def __init__(self, base="http://127.0.0.1:8081", testid=None,
                  timeout_s=120.0, retries=3):
         self.base = base
         self.testid = testid
@@ -28,19 +30,30 @@ class BoptestClient:
         self.retries = retries
 
     # -- plumbing -----------------------------------------------------
-    def _req(self, method, path, data=None):
+    def _req(self, method, path, data=None, timeout_s=None):
         # long advance loops (4000+ requests over an hour) hit transient
         # socket timeouts; retry with backoff instead of dying mid-run
         last = None
         for attempt in range(self.retries + 1):
+            # never send a JSON content-type with an empty body: the
+            # BOPTEST web service's body parser 500s on that combination
+            body = (json.dumps(data if data is not None else {}).encode()
+                    if method in ("POST", "PUT") else None)
             req = urllib.request.Request(
-                f"{self.base}{path}", method=method,
-                data=None if data is None else json.dumps(data).encode(),
-                headers={"Content-Type": "application/json"})
+                f"{self.base}{path}", method=method, data=body,
+                headers={"Content-Type": "application/json"}
+                if body is not None else {})
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
+                with urllib.request.urlopen(
+                        req, timeout=timeout_s or self.timeout_s) as resp:
                     out = json.load(resp)
                 return out.get("payload", out)
+            except urllib.error.HTTPError as exc:
+                # application-level error: the job DID reach the service, so
+                # retrying only queues duplicates — fail fast with the body
+                detail = exc.read().decode(errors="replace")[:500]
+                raise RuntimeError(
+                    f"{method} {path} -> HTTP {exc.code}: {detail}") from None
             except (urllib.error.URLError, TimeoutError) as exc:
                 last = exc
                 time.sleep(5.0 * (attempt + 1))
@@ -60,9 +73,12 @@ class BoptestClient:
 
     def set_scenario(self, time_period="peak_heat_day",
                      electricity_price="dynamic"):
+        # scenario init re-simulates a 7-day warmup: ~5 min on the worker,
+        # more if jobs are queued ahead of it — needs a much longer timeout
         return self._req("PUT", f"/scenario/{self.testid}",
                          {"time_period": time_period,
-                          "electricity_price": electricity_price})
+                          "electricity_price": electricity_price},
+                         timeout_s=1800.0)
 
     def set_step(self, step_s=300):
         return self._req("PUT", f"/step/{self.testid}", {"step": step_s})
@@ -73,12 +89,13 @@ class BoptestClient:
         return self._req("POST", f"/advance/{self.testid}", inputs or {})
 
     def kpis(self):
-        return self._req("GET", f"/kpi/{self.testid}")
+        # computed over the whole run history — give it room
+        return self._req("GET", f"/kpi/{self.testid}", timeout_s=600.0)
 
     def forecast(self, points, horizon_s, interval_s=300):
         return self._req("PUT", f"/forecast/{self.testid}",
                          {"point_names": points, "horizon": horizon_s,
-                          "interval": interval_s})
+                          "interval": interval_s}, timeout_s=600.0)
 
     # -- zone helpers ---------------------------------------------------
     @staticmethod
