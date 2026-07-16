@@ -250,6 +250,38 @@ Three observations:
    estimator complexity. A field-ready synthesis would train θ in
    simulation and refine with anchors in situ.
 
+## 8. Postscript II: the ladder on a foreign plant (BOPTEST)
+
+Every number above is measured on our own plant models — so it could, in
+principle, be an artifact of our building physics or our KPI definitions.
+It is not. The same firmware objects, unretuned with factory priors, were
+run against the independent [BOPTEST](https://ibpsa.github.io/project1-boptest/)
+reference plant `multizone_residential_hydronic` (five valve zones, gas
+boiler, `peak_heat_day` scenario), scored by BOPTEST's own KPIs
+(full method and results: [boptest-benchmark.md](boptest-benchmark.md)):
+
+| case | tdis_tot [K·h/zone] | ener_tot [kWh/m²] |
+|---|---:|---:|
+| plain PI (true temp) | 25.5 | 8.23 |
+| stock eTRV | 69.7 | 8.06 |
+| ladder eTRV (rung 2 firmware) | 52.0 | 8.23 |
+
+Two findings transfer, one gets sharpened:
+
+1. **The pathology reproduces** — the stock firmware costs 2.7× the PI
+   discomfort for a 2 % energy saving (here: 2.1×).
+2. **The metric caveat resolves in the ladder's favor.** BOPTEST's
+   discomfort KPI is *two-sided* — exactly the symmetric metric finding 4
+   above calls for — and the ladder still removes 40 % of the pathology gap
+   at PI-equal energy. The recovery is not a warm-side artifact of our
+   one-sided KPI.
+3. **Finding 1 gets its honest boundary condition.** "Fully recoverable"
+   holds on the plant the firmware's priors were shaped by; on a foreign
+   plant, scored from scenario start (learning nights included) with the
+   estimator's deliberate under-correction transferred as-is, recovery is
+   partial (40 %). Closing the rest is a matter of in-situ adaptation time
+   and per-plant priors — the field-deployment question.
+
 ## Reproduction
 
 | Result | Script |
@@ -260,6 +292,7 @@ Three observations:
 | Estimator unit probe | `sil/test_strategies.py` |
 | Opening-vs-flow evidence | `scripts/make_flow_evidence.py` |
 | RL bias-compensation search | `sil/run_rl_bias.py` |
+| BOPTEST cross-plant benchmark | `sil/run_boptest_benchmark.py` |
 
 All runs land in the run store (`runs/`) and the leaderboard; baselines are
 the `cmp_ideal` / `cmp_realistic` runs of `sil/run_thermostat_comparison.py`.
