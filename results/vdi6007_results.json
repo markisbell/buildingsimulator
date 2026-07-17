@@ -1,0 +1,190 @@
+{
+ "windows_s": [
+  [
+   3600.0,
+   86400.0
+  ],
+  [
+   781200.0,
+   864000.0
+  ],
+  [
+   5101200.0,
+   5184000.0
+  ]
+ ],
+ "c_air_variants": {
+  "production": 700000.0,
+  "minimal-air": 63000.0
+ },
+ "summary": {
+  "TC1/production": {
+   "max_abs_dev": 3.855,
+   "rms_dev": 1.175,
+   "per_window_max": [
+    3.731,
+    3.641,
+    3.855
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC1/minimal-air": {
+   "max_abs_dev": 0.916,
+   "rms_dev": 0.355,
+   "per_window_max": [
+    0.554,
+    0.899,
+    0.916
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC2/production": {
+   "max_abs_dev": 0.85,
+   "rms_dev": 0.498,
+   "per_window_max": [
+    0.85,
+    0.824,
+    0.432
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC2/minimal-air": {
+   "max_abs_dev": 0.593,
+   "rms_dev": 0.322,
+   "per_window_max": [
+    0.593,
+    0.332,
+    0.387
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC3/production": {
+   "max_abs_dev": 6.101,
+   "rms_dev": 2.17,
+   "per_window_max": [
+    6.101,
+    5.694,
+    5.652
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC3/minimal-air": {
+   "max_abs_dev": 2.591,
+   "rms_dev": 0.996,
+   "per_window_max": [
+    1.628,
+    2.591,
+    1.833
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC4/production": {
+   "max_abs_dev": 3.482,
+   "rms_dev": 2.072,
+   "per_window_max": [
+    3.482,
+    2.482,
+    2.632
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC4/minimal-air": {
+   "max_abs_dev": 3.033,
+   "rms_dev": 1.756,
+   "per_window_max": [
+    3.033,
+    1.691,
+    2.519
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC5/production": {
+   "max_abs_dev": 1.707,
+   "rms_dev": 0.521,
+   "per_window_max": [
+    1.591,
+    1.707,
+    1.435
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC5/minimal-air": {
+   "max_abs_dev": 0.554,
+   "rms_dev": 0.19,
+   "per_window_max": [
+    0.554,
+    0.41,
+    0.478
+   ],
+   "threshold_aixlib": 0.15,
+   "threshold_guideline": 0.1,
+   "unit": "K"
+  },
+  "TC6/production": {
+   "max_abs_dev": 896.253,
+   "rms_dev": 254.029,
+   "per_window_max": [
+    896.253,
+    864.854,
+    864.717
+   ],
+   "threshold_aixlib": 1.5,
+   "threshold_guideline": 1.0,
+   "unit": "W"
+  },
+  "TC6/minimal-air": {
+   "max_abs_dev": 117.003,
+   "rms_dev": 56.229,
+   "per_window_max": [
+    117.003,
+    105.583,
+    105.544
+   ],
+   "threshold_aixlib": 1.5,
+   "threshold_guideline": 1.0,
+   "unit": "W"
+  },
+  "TC7/production": {
+   "max_abs_dev": 306.039,
+   "rms_dev": 60.394,
+   "per_window_max": [
+    142.023,
+    306.039,
+    302.558
+   ],
+   "threshold_aixlib": 1.5,
+   "threshold_guideline": 1.0,
+   "unit": "W"
+  },
+  "TC7/minimal-air": {
+   "max_abs_dev": 89.535,
+   "rms_dev": 25.54,
+   "per_window_max": [
+    89.535,
+    43.717,
+    43.935
+   ],
+   "threshold_aixlib": 1.5,
+   "threshold_guideline": 1.0,
+   "unit": "W"
+  }
+ }
+}

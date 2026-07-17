@@ -21,6 +21,7 @@ IMAGES = {
     "IMG_DT": "dt_comparison_80s.png",
     "IMG_BOPTEST": "boptest_benchmark.png",
     "IMG_TABULA": "tabula_season.png",
+    "IMG_VDI": "vdi6007_check.png",
 }
 
 TEMPLATE = """
@@ -346,6 +347,38 @@ solar/gain scatter, flat tail above the heating limit. Right: monthly boiler hea
 Scripts: <code>fetch_dwd_weather.py</code>, <code>run_tabula_season.py</code>,
 <code>analyze_tabula_season.py</code>; method and sources in
 <code>docs/tabula-season-validation.md</code>. Weather: Deutscher Wetterdienst (CC BY 4.0).</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">11 · Zone methodology — VDI 6007-1 test cases</div>
+<h2>The production 2R2C room network against the guideline references</h2>
+<p>Test cases 1–7 of VDI 6007 Blatt 1 (near-analytical hourly reference trajectories,
+days 1/10/60 of a 60-day excitation; open-source case data from AixLib, BSD-3), run on the
+<code>ApartmentBranch</code> zone network extracted verbatim. Parameters via a documented
+reduction: Kron-eliminate the guideline's massless surface/star nodes (keeping the radiative
+star path — dropping it costs 23 % transmission), lump both storages into C<sub>mass</sub>,
+preserve the exact steady-state air→out conductance. Diagnostic comparison — the 0.1 K
+guideline band certifies implementations of the VDI algorithm itself, not other model classes.</p>
+<table>
+<tr><th>Quantity</th><th>Result</th><th></th></tr>
+<tr><td>Steady-state transmission (day-60 plateaus)</td><td class="num">exact by construction (TC1: 53.31 vs 53.3 °C analytic)</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Realistic mixed excitation (TC5: weather day, gains, sunblind)</td><td class="num">≤ 0.55 K topology / ≤ 1.71 K production</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Pure topology cost (minimal-air), heavy rooms</td><td class="num">0.59–0.92 K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Pure topology cost, lightweight rooms</td><td class="num">2.6–3.0 K (documented limit; Building80s rooms are heavyweight)</td><td></td></tr>
+<tr><td>Square-wave cases, production fast node</td><td class="num">3.5–6.1 K / ≤ 896 W, concentrated in step hours</td><td></td></tr>
+</table>
+<div class="finding"><em>The excess over the topology floor is a modeling choice, not an
+error:</em> VDI prescribes massless room air; the production zone carries the field-calibrated
+furnished-room fast node (C<sub>air</sub> = 0.70 MJ/K, τ ≈ 41 min). At every 1 kW gain edge or
+5 K setpoint step it absorbs ≈ C<sub>air</sub>·ΔT in that hour — TC6's 896 W maximum deviation
+is mechanically C<sub>air</sub>·5 K/1 h ≈ 970 W. Between steps the trajectories run parallel;
+on the realistic case the production zone stays within 1.7 K. The radiative cases sit closest,
+confirming the radiative-to-mass injection convention.</div>
+<figure><img src="data:image/png;base64,@@IMG_VDI@@" alt="VDI 6007 test case results">
+<figcaption>TC1–TC7: hourly means on days 1/10/60 (concatenated axis), VDI reference (black,
+steps) vs the 2R2C zone with production and minimal-air fast node; last panel: deviation
+summary. Scripts: <code>fetch_vdi6007_cases.py</code>, <code>run_vdi6007.py</code>; mapping,
+findings and reproduction traps in <code>docs/vdi6007-zone-tests.md</code>.</figcaption></figure>
 </section>
 
 <footer>Reproduce any figure: <code>docker run --rm -v ${PWD}:/work -w /work/sil

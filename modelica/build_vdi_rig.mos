@@ -1,0 +1,10 @@
+// Build the VDI 6007 zone test rig as FMI 2.0 CS FMU (embedded CVODE).
+// MSL only — no Buildings dependency. Run with workdir /work/build.
+
+loadModel(Modelica); getErrorString();
+loadFile("/work/modelica/VDI6007ZoneTest.mo"); getErrorString();
+
+setCommandLineOptions("--fmiFlags=s:cvode"); getErrorString();
+buildModelFMU(VDI6007ZoneTest, version="2.0", fmuType="cs",
+              fileNamePrefix="VDI6007ZoneTest");
+getErrorString();
