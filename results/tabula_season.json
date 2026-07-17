@@ -1,0 +1,42 @@
+{
+ "run": {
+  "tag": "full",
+  "start_day": 0,
+  "days": 213,
+  "control_dt": 60.0,
+  "wall_s": 2577.5,
+  "boost_hours": 618.8,
+  "burner_starts": 10548
+ },
+ "season": {
+  "e_boiler_kwh": 32165.0,
+  "e_radiators_kwh": 26205.0,
+  "q_boiler_spec_kwh_m2": 83.8,
+  "q_radiators_spec_kwh_m2": 68.2,
+  "distribution_loss_pct": 18.5,
+  "mean_room_temp_c": 20.81,
+  "burner_starts_per_day": 49.5,
+  "boost_h_per_day": 2.91
+ },
+ "degree_days": {
+  "gtz_20_15_season_Kd": 2414.0,
+  "gtz_20_15_site_year_Kd": 2524.0,
+  "gtz_20_15_reference_Kd": 3883.0,
+  "annualization_factor": 1.045,
+  "site_to_reference_factor": 1.539
+ },
+ "energy_signature": {
+  "slope_kw_per_k": -0.719,
+  "ua_effective_w_per_k": 719.0,
+  "heating_limit_c": 17.0
+ },
+ "tabula_comparison": {
+  "q_annual_site_climate_kwh_m2": 87.6,
+  "q_annual_reference_climate_kwh_m2": 134.7,
+  "q_radiators_annual_reference_kwh_m2": 109.8,
+  "tabula_net_standard_kwh_m2": 139.8,
+  "tabula_net_measured_level_kwh_m2": 115.2,
+  "vs_standard_pct": 96.4,
+  "vs_measured_level_pct": 116.9
+ }
+}

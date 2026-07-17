@@ -20,6 +20,7 @@ IMAGES = {
     "IMG_CORRIDOR": "neighbor_test_80s.png",
     "IMG_DT": "dt_comparison_80s.png",
     "IMG_BOPTEST": "boptest_benchmark.png",
+    "IMG_TABULA": "tabula_season.png",
 }
 
 TEMPLATE = """
@@ -86,7 +87,7 @@ footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
   <h1>Verification report — 1980s German multi-family building simulator</h1>
   <div class="meta">model <b>BuildingSimulator.Building80s</b> · IWU class MFH_G (1979–1983) ·
   3 floors × 2 apartments × 4 rooms · 90/70 °C two-pipe system ·
-  repo commit <b>HEAD</b> · 2026-07-16 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
+  repo commit <b>HEAD</b> · 2026-07-17 · interior coupling per ISO 13790 (G<sub>int</sub> = 15.5 W/m²K) ·
   furnished-room fast node (C<sub>air</sub> = 40 kJ/m²K, τ<sub>fast</sub> ≈ 41 min) ·
   night-accessible structural mass (C<sub>mass</sub> = 450 kJ/m²K, τ<sub>slow</sub> ≈ 70–80 h) ·
   radiators 1.3× design load (era sizing), dynamic water/steel storage (8 l + 30 kg per kW,
@@ -312,6 +313,39 @@ remains part of our device model (driven here by BOPTEST&rsquo;s delivered-heat 
 Full KPI payloads in <code>results/boptest_benchmark.json</code>; method, interface mapping and
 reproduction steps in <code>docs/boptest-benchmark.md</code>. Scripts:
 <code>run_boptest_benchmark.py</code>, <code>make_boptest_figure.py</code>.</figcaption></figure>
+</section>
+
+<section>
+<div class="eyebrow">10 · External validation — TABULA archetype statistics</div>
+<h2>A real-weather season against the measured-consumption corridor</h2>
+<p>One 213-day heating season (2023-10-01 … 2024-04-30) under measured DWD weather
+(station Rheinstetten 04177: hourly temperature, 10-min global/diffuse radiation
+transposed onto the facades) with era-authentic operation: eTRVs everywhere at constant
+setpoints, cycling boiler with Nachtabsenkung (−15 K, 22–05 h) and Schnellaufheizung,
+stochastic gains, unbalanced as-built valves. Compared — after degree-day normalization
+(season → site year ×1.045 → German reference GTZ 3883 K·d ×1.539) — against the
+IWU/TABULA statistics for exactly this archetype (MFH 1979–83, per m² living area).</p>
+<table>
+<tr><th>Quantity</th><th>Reference</th><th>Measured (simulation)</th><th></th></tr>
+<tr><td>Net space heat @ reference climate</td><td class="num">TABULA measured level 115.2 kWh/(m²·a)</td><td class="num">109.8 kWh/(m²·a) = 95.3 %</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>… vs standard calculation</td><td class="num">139.8 kWh/(m²·a)</td><td class="num">78.5 % — below, as measured buildings are</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Energy-signature slope</td><td class="num">≲ design UA ≈ 780 W/K</td><td class="num">719 W/K</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Heating-limit temperature</td><td class="num">15–17 °C (unrenovated MFH)</td><td class="num">17.0 °C</td><td><span class="pass">PASS</span></td></tr>
+<tr><td>Distribution loss (risers)</td><td class="num">DIN V 18599-5 era range</td><td class="num">18.5 %</td><td><span class="pass">PASS</span></td></tr>
+</table>
+<div class="finding"><em>The prebound effect emerges untuned:</em> the model lands on the
+empirically calibrated <b>measured</b>-consumption level (95 %), 21 % below the standard
+calculation — driven by night setback on a heavy envelope, the 17 °C heating limit,
+measured solar and shoulder-season float above setpoint (mean room 20.8 °C). Largest
+uncertainty is the climate normalization of the record-mild 2023/24 year (factor 1.54);
+across GTZ<sub>ref</sub> 3700–4100 the result stays at 92–102 % of the measured level.
+Room-resolved empirical validation (IEA Twin House) remains the open next rung.</div>
+<figure><img src="data:image/png;base64,@@IMG_TABULA@@" alt="TABULA season validation">
+<figcaption>Left: energy signature of the simulated season — linear heating branch,
+solar/gain scatter, flat tail above the heating limit. Right: monthly boiler heat.
+Scripts: <code>fetch_dwd_weather.py</code>, <code>run_tabula_season.py</code>,
+<code>analyze_tabula_season.py</code>; method and sources in
+<code>docs/tabula-season-validation.md</code>. Weather: Deutscher Wetterdienst (CC BY 4.0).</figcaption></figure>
 </section>
 
 <footer>Reproduce any figure: <code>docker run --rm -v ${PWD}:/work -w /work/sil
