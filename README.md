@@ -1,33 +1,8 @@
-# buildingsimulator
+# buildingsimulator — a multi-tenant hydronic-heating testbed for eTRV control
 
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![AI-generated](https://img.shields.io/badge/source-AI--generated-8A2BE2)
-
-Simulation environment for a multi-tenant building with hydronic radiator heating,
-covering the full path **central heat generation → distribution → individual radiators
-with valves**. Used as software-in-the-loop (SIL) feedback for investigating control
-strategies of electronic radiator thermostats: adaptive control of individual
-thermostats and distributed control of all thermostats in the building.
-
-**Intended use: control engineering teaching and algorithm development.** The
-plant is a verified, field-calibrated nonlinear multivariable system with realistic
-actuator and sensor imperfections — a working testbed for the classic topics:
-
-- **Parameter estimation / system identification** — grey-box RC identification,
-  the night-anchor bias estimator (Prony-style partial-decay identification, with
-  documented under- and over-identification failure modes)
-- **Adaptive control** — self-calibrating thermostat firmware, learned lead times,
-  the full strategy ladder in [docs/phase3-adaptive-strategies.md](docs/phase3-adaptive-strategies.md)
-- **Nonlinear control** — quick-opening valve characteristics, EN 442 radiator
-  power law, coupled hydraulic networks, relay-driven plants and limit cycles
-- **Model predictive control / optimal start** — multi-time-constant recovery
-  dynamics, schedule anticipation, energy-comfort trade-offs with honest KPIs
-- **Reinforcement learning** — a validated Gymnasium interface (`sil/gym_env.py`)
-  with a device-realistic partial-observability mode
-
-Exercises can attack the plant at every level: FMU inputs directly, the eTRV
-device firmware (`sil/thermostat.py` / `sil/strategies.py`), the Gym environment,
-or the [BOPTEST](https://ibpsa.github.io/project1-boptest/) reference benchmark.
+![validated](https://img.shields.io/badge/validated-BOPTEST%20%7C%20TABULA%20%7C%20VDI%206007-brightgreen)
 
 > [!NOTE]
 > **AI-generated code.** This repository — code, models, experiments and
@@ -41,30 +16,121 @@ or the [BOPTEST](https://ibpsa.github.io/project1-boptest/) reference benchmark.
 > review is advised before relying on quantitative results. Commit-level
 > attribution is recorded via `Co-Authored-By` trailers.
 
-## Results overview
+buildingsimulator runs a **multi-tenant building with hydronic radiator
+heating** — the full path **central heat generation → distribution
+(pump, risers) → individual radiators with thermostatic valves** — as a
+Modelica/FMU plant under a Python software-in-the-loop (SIL) harness, and
+turns it into a testbed for the control strategies of **electronic radiator
+thermostats (eTRVs)**: adaptive control of individual devices and
+distributed control of all thermostats in a building.
 
-| Headline result | Evidence |
-|---|---|
-| Design-day verification: 65.0 W/m² specific heat load (literature 58–70), all 24 rooms on setpoint, unbalanced-system flow signature | [building80s-parameters.md](docs/building80s-parameters.md) |
-| Field-calibrated dynamics: overnight free-cool tail −0.25 K/h (field corridor −0.2…−0.4), boost recovery ≈ 1 h — the fast-up/slow-down asymmetry as a power phenomenon | [heatup-dynamics.md](docs/heatup-dynamics.md) |
-| Device pathology: stock eTRV firmware on its biased valve sensor costs 2.1× the ideal-PI discomfort for a ~4 % energy saving | `sil/run_thermostat_comparison.py` |
-| Strategy ladder: firmware-only recovery of the device penalty (854 → 378 K·h discomfort), valve moves cut to a third, plus a documented negative on distributed coordination | [phase3-adaptive-strategies.md](docs/phase3-adaptive-strategies.md) |
-| RL under partial observability: 12-episode policy search learns the bias compensation from reward alone, recovering ≈ 90 % of the observability gap | [phase3-adaptive-strategies.md §7](docs/phase3-adaptive-strategies.md) |
-| External benchmark (BOPTEST `multizone_residential_hydronic`): pathology (2.7×) and ladder recovery (40 % of the gap at PI-equal energy) reproduce on the independent reference plant, on its two-sided KPIs | [boptest-benchmark.md](docs/boptest-benchmark.md) |
-| Archetype consumption corridor: a full season with measured DWD weather and era operation lands at 95 % of the TABULA MFH_G *measured*-consumption level (net 110 vs 115 kWh/(m²·a) at reference climate), 21 % below the standard calculation — the prebound effect emerges untuned; energy signature 719 W/K, heating limit 17.0 °C | [tabula-season-validation.md](docs/tabula-season-validation.md) |
-| Zone methodology vs VDI 6007-1 (TC1–TC7, diagnostic): steady-state transmission exact by construction; the 2R2C tracks the guideline reference within 0.55–1.7 K on the realistic mixed-excitation case and 0.6–3 K pure-topology cost elsewhere; the larger square-wave deviations are the documented furnished-room fast node (VDI prescribes massless air) | [vdi6007-zone-tests.md](docs/vdi6007-zone-tests.md) |
+The experimental core is the **three-layer view of a heated room**:
 
-The full claim-by-claim verification report with graphical evidence is generated by
-`scripts/make_verification_report.py` into `results/verification-report.html`.
+1. **Reality** — the room-resolved plant truth: a field-calibrated 1980s
+   German multi-family house (`Building80s`) with verified heat loads,
+   cooldown dynamics, riser hydraulics and oscillation signatures.
+2. **What the device senses** — an eTRV knows the room only through its
+   valve-mounted sensor: warm-biased by the radiator below it, sampled,
+   quantized, noisy. Real low-cost devices are almost blind, and the
+   simulator shows exactly what that costs (2.1× the ideal-PI discomfort).
+3. **What the firmware does about it** — a cumulative strategy ladder
+   (night-anchor bias estimation, battery-aware actuation, adaptive optimal
+   start, distributed coordination) recovers the device penalty in firmware
+   alone — including one documented negative result and the identifiability
+   limits found on the way.
 
-## Stack
+**Intended use: control engineering teaching and algorithm development.**
+The plant is a verified nonlinear multivariable system with realistic
+actuator and sensor imperfections — a working testbed for the classic
+topics:
 
-Modelica ([Buildings library](https://simulationresearch.lbl.gov/modelica/)) building +
-plant model → FMU export via OpenModelica (in Docker, no local install needed) →
-Python SIL harness via [FMPy](https://github.com/CATIA-Systems/FMPy). Rationale and
-package survey: [docs/simulation-package-research.md](docs/simulation-package-research.md).
+- **Parameter estimation / system identification** — grey-box RC
+  identification, the night-anchor bias estimator (Prony-style
+  partial-decay identification, with documented under- and
+  over-identification failure modes)
+- **Adaptive control** — self-calibrating thermostat firmware, learned lead
+  times, the full strategy ladder in
+  [docs/phase3-adaptive-strategies.md](docs/phase3-adaptive-strategies.md)
+- **Nonlinear control** — quick-opening valve characteristics, EN 442
+  radiator power law, coupled hydraulic networks, relay-driven plants and
+  limit cycles
+- **Model predictive control / optimal start** — multi-time-constant
+  recovery dynamics, schedule anticipation, energy-comfort trade-offs
+- **Reinforcement learning** — a validated Gymnasium interface
+  (`sil/gym_env.py`) with a device-realistic partial-observability mode
 
-## Quickstart (Windows, Docker Desktop required)
+Exercises can attack the plant at every level: FMU inputs directly, the
+eTRV device firmware (`sil/thermostat.py` / `sil/strategies.py`), the Gym
+environment, or the [BOPTEST](https://ibpsa.github.io/project1-boptest/)
+reference benchmark. Parameter derivations and physics decisions live in
+`docs/` ([building80s-parameters.md](docs/building80s-parameters.md),
+[radiator-modeling.md](docs/radiator-modeling.md),
+[valve-modeling.md](docs/valve-modeling.md),
+[heatup-dynamics.md](docs/heatup-dynamics.md)); the claim-by-claim
+verification report with graphical evidence is generated by
+`scripts/make_verification_report.py` into
+[results/verification-report.html](results/verification-report.html).
+
+---
+
+## The four layers
+
+| Layer | What it is | Where |
+|-------|-----------|-------|
+| **Plant** | Modelica models (Buildings library) compiled to FMI 2.0 CS FMUs with embedded CVODE | `modelica/` → `build/` |
+| **SIL harness + device firmware** | FMPy co-simulation loop, eTRV device models, strategy ladder, KPI module, Gym env | `sil/` |
+| **Dashboard** | React (Vite + Recharts) experiment workbench + FastAPI run-store API — run catalog, building view, KPI leaderboard, device inspector, run launcher | `ui/` + `server/` (ports 5173 / 8010) |
+| **Grafana** | free-form time-series exploration, live monitoring of long batches, later field-measurement data | provisioned dashboard (port 3001) |
+
+Simulation runs persist to `runs/<id>/` (manifest + series); the dashboard
+lists them, replays them with a time scrubber, and polls live while a run
+is in progress.
+
+---
+
+## What it can do
+
+- **Parameterizable multi-tenant building** (`MultiTenantBuilding`): N
+  floors × M apartments (compile-time), setpoint-tracking boiler + constant
+  speed pump feeding a vertical two-pipe riser; per apartment an EN 442-2
+  radiator with dynamic water/steel storage behind a quick-opening TRV
+  insert and a 2R2C zone.
+- **Verified 1980s German MFH** (`Building80s`): room-resolved
+  (living/bedroom/kitchen/bath + hall), IWU-typology envelope, 90/70
+  system, per-stack risers, manual presetting/balancing valves — design-day
+  verified at 65 W/m², overnight cooldown calibrated to the field corridor
+  (−0.2…−0.4 K/h).
+- **Effects central to distributed TRV control, built in**: riser
+  hydraulics (upper floors starve when ground-floor valves open),
+  inter-apartment coupling (an unheated apartment steals heat),
+  facade asymmetry (kW-scale south solar vs diffuse north light).
+- **Oscillation realism**: cycling two-point boiler (era on/off burner) with
+  Schnellaufheizung morning boost, riser water columns, stochastic internal
+  gains and window events — burner starts, supply sawtooth, room ripple and
+  flow chatter land inside published field ranges.
+- **Valve realism** (German M30×1.5 inserts, 1.5 mm stroke): table-based
+  quick-opening characteristic anchored to Danfoss RA-N data, sealing dead
+  zone, leakage floor; device-side 0.1 mm motor-pin backlash; 60 s motor
+  stroke as a harness-side rate limit.
+- **eTRV device model**: sampled control, valve-mounted sensor
+  bias/noise/quantization fed by radiator heat, actuation deadband, motor
+  current signature with stall-based zero referencing, battery KPIs.
+- **The Phase 3 strategy ladder**: sensor-bias compensation, battery-aware
+  limit-cycle suppression, per-room adaptive optimal start, and a
+  documented negative on distributed considerate recovery
+  ([results](docs/phase3-adaptive-strategies.md)).
+- **Gymnasium interface** (`sil/gym_env.py`): valve-vector actions through
+  the real motor rate limit, leaderboard-consistent reward, plant- and
+  device-observation modes; an RL postscript shows the bias compensation is
+  learnable from reward alone.
+- **BOPTEST adapter** (`sil/boptest_adapter.py`): the same firmware objects
+  run unmodified against `multizone_residential_hydronic`.
+
+---
+
+## Run it
+
+### Quickstart (Windows, Docker Desktop)
 
 ```powershell
 .\scripts\build_image.ps1              # once: toolchain image (OpenModelica 1.27 + Buildings 13 + FMPy)
@@ -82,10 +148,11 @@ docker compose -p buildingsim up -d
 cd ui; npm install; npm run dev        # React dashboard at http://localhost:5173
 ```
 
-## Alternative: Docker-free toolchain in WSL
+### Docker-free: WSL toolchain
 
-If Docker Desktop is unavailable (e.g. its Windows service needs an admin start),
-the same toolchain runs directly in a per-user WSL distro — no admin rights needed:
+If Docker Desktop is unavailable (e.g. its Windows service needs an admin
+start), the same toolchain runs directly in a per-user WSL distro — no
+admin rights needed:
 
 ```powershell
 wsl --install -d Ubuntu-24.04 --no-launch
@@ -96,142 +163,114 @@ wsl -d Ubuntu-24.04 -u root -- bash -c "cd /work/build && omc /work/modelica/bui
 wsl -d Ubuntu-24.04 -u root -- bash -c "cd /work/sil && /opt/silenv/bin/python3 run_design_day.py"
 ```
 
-The setup script installs OpenModelica (apt stable), Modelica Buildings 13.0.0 and a
-Python venv at `/opt/silenv`, and links the repo at `/work` so the `.mos` build
-scripts work unchanged. If WSL has no network (campus NAT policies), put
-`networkingMode=mirrored` under `[wsl2]` in `%UserProfile%\.wslconfig` and run
-`wsl --shutdown` once. The Grafana/BOPTEST stack still requires Docker.
+The setup script installs OpenModelica (apt stable), Modelica Buildings
+13.0.0 and a Python venv at `/opt/silenv`, and links the repo at `/work` so
+the `.mos` build scripts work unchanged. If WSL has no network (campus NAT
+policies), put `networkingMode=mirrored` under `[wsl2]` in
+`%UserProfile%\.wslconfig` and run `wsl --shutdown` once. The
+Grafana/BOPTEST stack still requires Docker.
 
-Division of labor: the **React dashboard** is the experiment workbench (building view,
-run catalog, KPI board, device inspector); **Grafana** (http://localhost:3001,
-provisioned "buildingsimulator runs" dashboard, Infinity datasource reading the same
-API) covers free-form time-series exploration and live monitoring of long batches —
-and later takes field-measurement data alongside simulations.
+Experiments can also be launched from the dashboard (thermostat type,
+duration, cloudiness, vacant apartments) via `POST /api/launch`; running
+experiments can be stopped, and the leaderboard ranks all runs by KPI.
 
-Simulation runs persist to `runs/<id>/` (manifest.json + series.csv); the dashboard
-lists them, replays them with a time scrubber, and polls live while a run is in
-progress. Falls back to bundled mock data when the API is unreachable.
+---
 
-Experiments are launched from the dashboard (new run: thermostat type, duration,
-cloudiness, vacant apartments) via `POST /api/launch`, which spawns
-`sil/run_experiment.py` inside the API container; running experiments can be stopped.
-The leaderboard view ranks all runs by KPI (per-evaluated-day normalized, best values
-highlighted).
+## Architecture
 
-## Layout
+```
+modelica/*.mo ─► omc (Docker or WSL) ─► build/*.fmu  (FMI 2.0 CS, embedded CVODE)
+                                            │
+             sil/harness.py (FMPy fixed-step loop, 60 s valve-stroke rate limit)
+                    │ outputs: TRoom, mFlow, QRad, dpVal, TSup, TRet, QBoi …
+                    ▼
+   controllers per radiator: PIThermostat │ ElectronicThermostat │ strategy ladder
+   supervisory: TwoPointBoiler + Schnellaufheizung (firmware in the loop)
+                    │ records
+                    ▼
+        runs/<id>/ (runstore) ─► FastAPI :8010 ─► React dashboard :5173
+                                        └────────► Grafana :3001 (Infinity)
+```
 
 | Path | Content |
 |------|---------|
-| `docker/` | Toolchain image definition |
-| `modelica/BuildingSimulator/` | Modelica package: `ApartmentBranch` (valve + radiator + 2R2C zone), `MultiTenantBuilding` (generic building), `Building80s` (verified 1979-83 German MFH, room-resolved, 90/70) |
-| `modelica/PrototypeTwoRooms.mo` | Minimal two-room prototype |
-| `sil/harness.py` | Generic FMU co-simulation loop (`BuildingFMU`, `run_simulation`) |
-| `sil/controllers.py` | Controller interface + baseline PI thermostat — the SIL slot for control strategies under test |
-| `sil/thermostat.py` | Realistic eTRV device model: sampled control, valve-mounted sensor bias/noise/quantization, actuation deadband, adaptation run, battery KPIs |
-| `sil/actuator.py` | Valve actuator mechanics: pin force (spring/seal/friction/Δp), motor current with noise+ADC, backlash, unknown mechanical zero |
-| `sil/kpi.py` | Discomfort (K·h), boiler/pump energy, valve travel KPIs |
-| `sil/scenario_common.py` | Shared weather, heating curve, occupancy schedules, winter scenario factory |
-| `sil/boiler.py` | Supervisory boiler logic: two-point burner relay (era on/off cycling) + Schnellaufheizung morning boost (+12 K on the curve until rooms recover) |
-| `sil/solar.py` | Facade solar gains via pvlib (clear-sky + cloudiness, per-apartment orientation) |
-| `sil/run_multitenant.py` | Multi-tenant scenarios: flow balancing; winter week with vacant apartment |
-| `sil/run_thermostat_comparison.py` | Ideal PI vs realistic eTRV on identical scenario, KPI table |
-| `sil/run_prototype.py` | Prototype scenarios: winter week closed-loop; hydraulic coupling demo |
-| `ui/` | React dashboard (Vite + Recharts): run selector, building view, plant panel, KPI board, time scrubber, device inspector; live-polls running simulations |
-| `sil/runstore.py` | Persists every run to `runs/<id>/` (manifest + series) |
-| `server/main.py` | FastAPI run-store API (`/api/runs`, `/manifest`, `/series`) |
-| `build/` | Compiled FMUs (generated) |
-| `results/` | Plots + CSV time series (generated) |
-| `docs/` | Research report, BOPTEST setup + benchmark results |
+| `modelica/BuildingSimulator/` | `ApartmentBranch` (valve + radiator + 2R2C zone), `MultiTenantBuilding`, `Building80s` |
+| `sil/harness.py` | Generic FMU co-simulation loop |
+| `sil/thermostat.py` / `sil/strategies.py` | eTRV device model + Phase 3 firmware ladder |
+| `sil/controllers.py` / `sil/boiler.py` | Baseline PI, supervisory boiler logic |
+| `sil/gym_env.py` | Gymnasium environment (plant/device observation modes) |
+| `sil/boptest_adapter.py` | BOPTEST REST adapter (same firmware objects) |
+| `sil/kpi.py` / `sil/runstore.py` | KPIs; run persistence for dashboard/Grafana |
+| `scripts/` | FMU builds, WSL setup, data fetchers, verification report |
+| `docs/` / `results/` / `data/` | Documentation; committed evidence; weather + VDI case data |
 
-## Multi-tenant building model
+---
 
-`BuildingSimulator.MultiTenantBuilding`: setpoint-tracking boiler (+80 l water mass)
-and constant-speed pump feed a vertical two-pipe riser; on every floor `nApeFlo`
-apartment branches tap off (EN 442-2 radiator with dynamic water/steel storage behind
-a quick-opening TRV insert, 2R2C zone). Supply-side supervisory logic — outdoor-reset
-curve, two-point burner cycling, Schnellaufheizung boost — lives in Python
-(`sil/boiler.py`). Floor and apartment counts are compile-time parameters
-(`.\scripts\build_multitenant_fmu.ps1 -Floors N -ApartmentsPerFloor M`).
+## The plant models
 
-FMU inputs: `yVal[i]`, `QGain[i]` (solar + internal gains) per apartment, `TOut`, `TSupSet`.
-FMU outputs: `TRoom[i]`, `mFlow[i]`, `QRad[i]`, `dpVal[i]`, `TSup`, `TRet`, `QBoi`, `PPum`.
+**`MultiTenantBuilding`** — setpoint-tracking boiler (+80 l water mass) and
+constant-speed pump feed a vertical two-pipe riser; on every floor
+`nApeFlo` apartment branches tap off. Zones are 2R2C (fast air node + slow
+structural mass): the air responds to solar bursts and radiator action
+within minutes while the building mass stays slow. Weather comes from
+Python: synthetic sinusoidal `TOut` plus facade solar gains via
+[pvlib](https://pvlib-python.readthedocs.io/) (clear-sky Ineichen with
+cloudiness factor, per-apartment facade orientation); measured weather
+(DWD, EPW) can replace the synthetic model without touching the FMU — the
+TABULA season validation does exactly that.
+FMU inputs: `yVal[i]`, `QGain[i]`, `TOut`, `TSupSet` · outputs: `TRoom[i]`,
+`mFlow[i]`, `QRad[i]`, `dpVal[i]`, `TSup`, `TRet`, `QBoi`, `PPum`.
 
-Zones are 2R2C (fast air node + slow structural mass node): the air responds to solar
-bursts and radiator action within minutes while the building mass stays slow. Weather
-comes from Python: synthetic sinusoidal `TOut` plus **facade solar gains** via
-[pvlib](https://pvlib-python.readthedocs.io/) (clear-sky Ineichen with cloudiness
-factor, per-apartment facade orientation, window area × g-value × shading;
-`sil/solar.py`). Measured weather (DWD TRY / EPW) can replace the synthetic model via
-`pvlib.iotools` without touching the FMU.
+**`Building80s`** — the verified research plant: IWU class MFH_G
+(1979–1983), 3 floors × 2 apartments × 4 rooms, 90/70 °C two-pipe system,
+radiators 1.3× design load (era sizing) with dynamic water/steel storage,
+interior coupling per ISO 13790, night-accessible structural mass
+(DIN V 18599-2-backed), manual presetting rings + riser balancing valves as
+FMU inputs. Parameter derivation with sources:
+[docs/building80s-parameters.md](docs/building80s-parameters.md).
 
-Effects central to distributed thermostat control that are built in:
-- **Riser hydraulics** — upper floors see less differential pressure, so open valves on
-  the ground floor starve the top floor (unbalanced system, no static balancing valves).
-- **Inter-apartment coupling** — stacked apartments exchange heat through floor/ceiling
-  conductances; an unheated apartment "steals" heat from its neighbours.
-- **Facade asymmetry** — south apartments get kW-scale midday solar gains in clear
-  winter weather while north apartments see only diffuse light; thermostats must reject
-  an apartment-specific disturbance (overheating KPI tracks failures).
+**`PrototypeTwoRooms`** — the minimal two-room plant: shared riser
+resistances behind a constant-speed pump, so closing one valve shifts flow
+to the other branch — the hydraulic coupling that distributed thermostat
+control has to deal with, in its smallest reproducible form.
 
-### Valve realism (German M30 x 1.5 TRV inserts, 1.5 mm pin stroke)
+---
 
-- **In the FMU** (plant hydraulics): table-based quick-opening flow characteristic
-  (`Buildings.Fluid.Actuators.Valves.TwoWayTable`, anchored to Danfoss RA-N data:
-  ~80 % flow at 30 % stroke) with a sealing dead zone up to ~6 % stroke (elastomer
-  seal) and a leakage floor of 0.15 % of Kvs (numerical robustness at trickle flows).
-  Table is a model parameter (`yCha`/`phiCha` in `ApartmentBranch`). The 60 s
-  full-stroke motor speed is enforced as a rate limit in the SIL harness — not as an
-  in-FMU filter, whose states clash with the dynamic radiators via state selection
-  (see docs/radiator-modeling.md §3).
-- **In the device model** (`sil/thermostat.py`): 0.1 mm mechanical play between motor
-  command and pin position — opening and closing paths differ (hysteresis) — plus an
-  optional calibration-offset error. Verified by `sil/run_valve_sweep.py`.
+## Validation
 
-## Prototype model
+Every headline claim is measured by a reproducible script and documented
+next to its evidence; the full graphical report is
+[results/verification-report.html](results/verification-report.html).
 
-`PrototypeTwoRooms.mo`: ideal boiler with supply-temperature setpoint → constant-speed
-pump (realistic pump curve) → common supply/return riser resistances → two parallel
-radiator branches (EN 442-2 radiators, equal-percentage valves) → two RC room zones.
-FMU inputs: `yVal1`, `yVal2` (valve positions 0…1), `TOut`, `TSupSet`.
-FMU outputs: `TRoom1/2`, `TSup`, `TRet`, `mFlow1/2`, `QBoi`.
+| Result | Evidence |
+|---|---|
+| Design-day verification: 65.0 W/m² specific heat load (literature 58–70), all 24 rooms on setpoint, unbalanced-system flow signature | [building80s-parameters.md](docs/building80s-parameters.md) |
+| Field-calibrated dynamics: overnight free-cool tail −0.25 K/h (field corridor −0.2…−0.4), boost recovery ≈ 1 h — the fast-up/slow-down asymmetry as a power phenomenon | [heatup-dynamics.md](docs/heatup-dynamics.md) |
+| Device pathology: stock eTRV firmware on its biased valve sensor costs 2.1× the ideal-PI discomfort for a ~4 % energy saving | `sil/run_thermostat_comparison.py` |
+| Strategy ladder: firmware-only recovery of the device penalty (854 → 378 K·h discomfort), valve moves cut to a third, plus a documented negative on distributed coordination | [phase3-adaptive-strategies.md](docs/phase3-adaptive-strategies.md) |
+| RL under partial observability: 12-episode policy search learns the bias compensation from reward alone, recovering ≈ 90 % of the observability gap | [phase3-adaptive-strategies.md §7](docs/phase3-adaptive-strategies.md) |
+| **External benchmark (BOPTEST)**: pathology (2.7×) and ladder recovery (40 % of the gap at PI-equal energy) reproduce on the independent `multizone_residential_hydronic` plant, on its two-sided KPIs | [boptest-benchmark.md](docs/boptest-benchmark.md) |
+| **Archetype statistics (TABULA/IWU)**: a full season with measured DWD weather and era operation lands at 95 % of the MFH_G *measured*-consumption level (net 110 vs 115 kWh/(m²·a) at reference climate), 21 % below the standard calculation — the prebound effect emerges untuned; energy signature 719 W/K, heating limit 17.0 °C | [tabula-season-validation.md](docs/tabula-season-validation.md) |
+| **Zone methodology (VDI 6007-1, TC1–TC7, diagnostic)**: steady-state transmission exact by construction; 0.55–1.7 K on the realistic mixed-excitation case, 0.6–3 K pure topology cost elsewhere; the larger square-wave deviations are the documented furnished-room fast node (VDI prescribes massless air) | [vdi6007-zone-tests.md](docs/vdi6007-zone-tests.md) |
 
-Because the pump runs at constant speed behind shared riser resistances, closing one
-valve shifts differential pressure and flow to the other branch — the hydraulic coupling
-that distributed thermostat control has to deal with (demonstrated in Scenario B).
+Numerics: communication-step convergence (30 s vs 10 s) is part of the
+verification report. Open validation rungs: the ASHRAE 140 envelope subset
+and an empirical replay of the IEA EBC Annex 58 Twin-House dataset.
 
-## Roadmap
+---
 
-1. ✅ Toolchain + prototype SIL loop
-2. ✅ Parameterizable multi-tenant model: N floors × M apartments, riser network, central plant
-3. ✅ Thermostat realism: sampled control, valve-mounted sensor bias, actuation deadband, battery KPIs
-4. ✅ Verified 1980s German MFH (`Building80s`): room-resolved (living/bedroom/kitchen/bath + hall),
-   IWU-typology envelope, 90/70 system, per-stack risers — design-day verified at 65 W/m²,
-   overnight cooldown calibrated to the field corridor (−0.2…−0.4 K/h)
-   ([parameters + results](docs/building80s-parameters.md))
-5. ✅ Manual valves (presetting rings + riser balancing as FMU inputs) with a damped
-   proportional balancing routine — as-built / open / balanced baseline states
-   ([details](docs/building80s-parameters.md))
-6. ✅ Adaptive + distributed control strategies: cumulative firmware ladder (bias compensation,
-   battery policies, optimal start) closing the device comfort penalty and cutting valve moves
-   to a third, plus a documented negative result on distributed considerate recovery
-   ([results](docs/phase3-adaptive-strategies.md))
-7. ✅ Gymnasium interface (`sil/gym_env.py`): the verified plant as a standard RL environment —
-   valve-vector actions through the real motor rate limit, leaderboard-consistent reward
-   components, PI-policy equivalence validated (`sil/run_gym_smoke.py`)
-8. ✅ Device-realistic observation mode (`observation_mode="device"`): agents observe through the
-   eTRV valve-mounted sensor while the reward stays on true comfort — the
-   learning-under-sensor-bias setting (validated: a sensed-obs PI reproduces the 1.4 K undershoot)
-9. ✅ Benchmarking against [BOPTEST](https://ibpsa.github.io/project1-boptest/)
-   `multizone_residential_hydronic`: the sensor-bias pathology and the ladder recovery
-   reproduce on the independent reference plant — the stock eTRV costs 2.7× the PI
-   discomfort, the Phase 3 firmware recovers 40 % of the gap at PI-equal energy,
-   scored by BOPTEST's own two-sided KPIs ([results](docs/boptest-benchmark.md))
-10. ✅ Building-model integrity, rung 1 — archetype statistics: a real-weather season
-    (DWD Rheinstetten 2023/24, night setback, eTRVs) lands at 95 % of the TABULA
-    MFH_G measured-consumption level and 21 % below the standard calculation,
-    reproducing the prebound effect ([results](docs/tabula-season-validation.md))
-11. ✅ Building-model integrity, rung 2a — VDI 6007-1 zone tests (TC1–TC7, diagnostic):
-    exact steady-state transmission via Kron-reduced mapping; 0.55–1.7 K on the
-    realistic mixed case, square-wave deviations attributed to the deliberate
-    furnished-room fast node ([results](docs/vdi6007-zone-tests.md));
-    open next rungs: ASHRAE 140 envelope subset, IEA Twin-House empirical replay
+## License
+
+The source code, models and documentation are licensed under the
+[MIT License](LICENSE).
+
+Committed data carries its own attributions: the weather year under
+`data/weather/` is DWD Climate Data Center open data
+([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), "Quelle:
+Deutscher Wetterdienst"); the VDI 6007 test-case tables under
+`data/vdi6007/` are extracted from
+[RWTH-EBC/AixLib](https://github.com/RWTH-EBC/AixLib) (BSD-3-Clause). The
+[Modelica Buildings library](https://simulationresearch.lbl.gov/modelica/)
+(LBNL) is a build-time dependency fetched by the toolchain, not
+redistributed here. TABULA/IWU comparison values are cited from the public
+typology brochures.
